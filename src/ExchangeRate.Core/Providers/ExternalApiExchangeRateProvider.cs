@@ -70,7 +70,9 @@ namespace ExchangeRate.Core.Providers
 
             var exchangeRates = await GetExchangeRatesAsync(sb.ToString(), cancellationToken);
 
-            return GetExchangeRates(exchangeRates, Source, ExchangeRateFrequencies.Daily);
+            var testthissection = GetExchangeRates(exchangeRates, Source, ExchangeRateFrequencies.Daily);
+
+            return testthissection;
         }
 
         protected async Task<IEnumerable<ExchangeRateEntity>> GetMonthlyRatesAsync(string bankId, (int year, int month) period = default, CancellationToken cancellationToken = default)
@@ -88,7 +90,9 @@ namespace ExchangeRate.Core.Providers
 
             var exchangeRates = await GetExchangeRatesAsync(sb.ToString(), cancellationToken);
 
-            return GetExchangeRates(exchangeRates, Source, ExchangeRateFrequencies.Monthly);
+            var testthissection = GetExchangeRates(exchangeRates, Source, ExchangeRateFrequencies.Monthly);
+
+            return testthissection;
         }
 
         protected async Task<IEnumerable<ExchangeRateEntity>> GetWeeklyRatesAsync(string bankId, (int year, int month) period = default, CancellationToken cancellationToken = default)
@@ -158,6 +162,58 @@ namespace ExchangeRate.Core.Providers
 
         private async Task<ExchangeRates> GetExchangeRatesAsync(string requestUri, CancellationToken cancellationToken = default)
         {
+            //This is my own bit of code to simulate what the API will return
+
+            
+            string jsonString = @"{
+                ""BankId"":""ECB"",
+                ""BaseCurrency"":""EUR"",
+                ""QuoteType"":""Direct"",
+                ""Rates"": {
+                    ""2020-09-24"": {
+                        ""CHF"": { ""rate"": 0.9157, ""unitMultiplier"": 2 },
+                        ""CNY"": { ""rate"": 8.2834, ""unitMultiplier"": 2 },
+                        ""USD"": { ""rate"": 1.1919, ""unitMultiplier"": null },
+                        ""GBP"": { ""rate"": 0.86620, ""unitMultiplier"": null }
+                    },
+                    ""2020-09-25"": {
+                        ""CHF"": { ""rate"": 0.9157, ""unitMultiplier"": 2 },
+                        ""CNY"": { ""rate"": 8.2834, ""unitMultiplier"": 2 },
+                        ""USD"": { ""rate"": 1.1919, ""unitMultiplier"": null },
+                        ""GBP"": { ""rate"": 0.86620, ""unitMultiplier"": null }
+                    }
+                }
+            }";
+
+            jsonString = @"
+            {
+                ""bankId"": ""ECB"",
+                ""baseCurrency"": ""EUR"",
+                ""quoteType"": ""Indirect"",
+                ""rates"": {
+                    ""2024-01-15T00:00:00"": {
+                        ""USD"": {""rate"": 1.08238}, 
+                        ""GBP"": {""rate"": 0.85647}, 
+                        ""JPY"": {""rate"": 159.24}
+                    }, 
+                    ""2024-02-02T00:00:00"": {
+                        ""USD"": {""rate"": 1.08456}, 
+                        ""GBP"": {""rate"": 0.85712}, 
+                        ""JPY"": {""rate"": 159.87}
+                    }, 
+                    ""2024-02-03T00:00:00"": {
+                        ""USD"": {""rate"": 1.08192}, 
+                        ""GBP"": {""rate"": 0.85589}, 
+                        ""JPY"": {""rate"": 158.96}
+                    }
+                }
+            }";
+            var testresponse = JsonSerializer.Deserialize<ExchangeRates>(jsonString, _jsonSerializerOptions);
+
+            return testresponse;
+            /**/
+
+            //The original code continues from below
             var token = await GetTokenAsync(cancellationToken);
 
             using var request = new HttpRequestMessage();

@@ -10,6 +10,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
@@ -68,6 +69,8 @@ public class ExchangeRateIntegrationTests : IDisposable
         // Arrange
         var date = new DateTime(2024, 01, 15);
         var expectedUsdRate = 1.0856m;
+
+        Console.WriteLine("Got Here");
 
         _factory.SetupTokenEndpoint();
         _factory.SetupEcbDailyRatesEndpoint(date, new Dictionary<string, decimal>
@@ -1388,6 +1391,8 @@ public class ExchangeRateApiFactory : WebApplicationFactory<Program>
 
     private static string BuildRatesJson(string bankId, string baseCurrency, string quoteType, DateTime date, Dictionary<string, decimal> rates)
     {
+        Console.WriteLine(BuildRatesJson(bankId, baseCurrency, quoteType, new Dictionary<DateTime, Dictionary<string, decimal>> { { date, rates } }));
+
         return BuildRatesJson(bankId, baseCurrency, quoteType, new Dictionary<DateTime, Dictionary<string, decimal>> { { date, rates } });
     }
 

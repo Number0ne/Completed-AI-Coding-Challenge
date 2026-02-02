@@ -159,3 +159,21 @@ Creates and manages exchange rate provider instances:
 - `ExchangeRate` - Represents a single exchange rate record with date, currency, source, frequency, and rate value
 - `PeggedCurrency` - Defines fixed exchange rate relationships between currencies
 - `Country` - Contains country information including currency associations and EU membership dates
+
+
+## Additional Information
+### Transaction Processing Pattern: 
+
+Our system processes transactions strictly one-by-one (serially), not in batches.   
+
+### Data Access Strategy: 
+
+Although requests are individual, we almost always process data within the same month. Therefore, fetching/caching a full month of rates for a single provider at a time is the ideal optimization.   
+
+### External API Limits: 
+
+External providers have strict rate limits. We must avoid making individual API calls for every missing day; if a rate is missing, fetch the whole month to  minimize HTTP requests.   
+
+### Data Correction Requirement: 
+
+We frequently receive corrected rates from banks after the fact. The system must be able to overwrite/update an existing rate in the database without requiring a full cache clear or manual intervention.
