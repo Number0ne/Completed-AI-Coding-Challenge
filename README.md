@@ -40,3 +40,5 @@ If a different rate has been returned for a specific time then instead of throwi
 
 I plan on adding a database to this application using EF but let me hand in my application first so at least I get the process kick started while I work on this. Overall it has been great working on this and a little jolt my brain needed.
 
+# I might've overcooked it bit I wanted to take my best swing at it
+
