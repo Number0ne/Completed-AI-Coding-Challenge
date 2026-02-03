@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using ExchangeRate.Core.Entities;
 using ExchangeRate.Core.Enums;
 using ExchangeRate.Core.Interfaces.Providers;
 using ExchangeRate.Core.Models;
@@ -27,13 +28,8 @@ namespace ExchangeRate.Core.Providers
         private readonly ExternalExchangeRateApiConfig _externalExchangeRateApiConfig;
         private readonly JsonSerializerOptions _jsonSerializerOptions;
 
-        public abstract CurrencyTypes Currency { get; }
-
-        public abstract QuoteTypes QuoteType { get; }
-
-        public abstract ExchangeRateSources Source { get; }
-
-        public abstract string BankId { get; }
+        //This is the returned forex provider whose details will be used to get the transactions
+        public ForexProviders returned_Provider;
 
         static ExternalApiExchangeRateProvider()
         {
@@ -55,9 +51,9 @@ namespace ExchangeRate.Core.Providers
             _jsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         }
 
-        protected async Task<IEnumerable<ExchangeRateEntity>> GetDailyRatesAsync(string bankId, (DateTime startDate, DateTime endDate) period = default, CancellationToken cancellationToken = default)
+        protected async Task<IEnumerable<ExchangeRateEntity>> GetDailyRatesAsync(ForexProviders providers, (DateTime startDate, DateTime endDate) period = default, CancellationToken cancellationToken = default)
         {
-            var sb = new StringBuilder($"/v1/Banks/{bankId}/DailyRates/");
+            var sb = new StringBuilder($"/v1/Banks/{providers.BankId}/DailyRates/");
 
             if (period == default)
             {
@@ -68,36 +64,16 @@ namespace ExchangeRate.Core.Providers
                 sb.Append($"TimeSeries?startDate={period.startDate:yyyy-MM-dd}&endDate={period.endDate:yyyy-MM-dd}");
             }
 
-            var exchangeRates = await GetExchangeRatesAsync(sb.ToString(), cancellationToken);
+            var exchangeRates = await GetExchangeRatesAsync(providers, sb.ToString(), cancellationToken);
 
-            var testthissection = GetExchangeRates(exchangeRates, Source, ExchangeRateFrequencies.Daily);
-
-            return testthissection;
-        }
-
-        protected async Task<IEnumerable<ExchangeRateEntity>> GetMonthlyRatesAsync(string bankId, (int year, int month) period = default, CancellationToken cancellationToken = default)
-        {
-            var sb = new StringBuilder($"/v1/Banks/{bankId}/MonthlyRates/");
-
-            if (period == default)
-            {
-                sb.Append("Latest");
-            }
-            else
-            {
-                sb.Append($"{period.year}/{period.month}");
-            }
-
-            var exchangeRates = await GetExchangeRatesAsync(sb.ToString(), cancellationToken);
-
-            var testthissection = GetExchangeRates(exchangeRates, Source, ExchangeRateFrequencies.Monthly);
+            var testthissection = GetExchangeRates(exchangeRates, providers.Source, ExchangeRateFrequencies.Daily);
 
             return testthissection;
         }
 
-        protected async Task<IEnumerable<ExchangeRateEntity>> GetWeeklyRatesAsync(string bankId, (int year, int month) period = default, CancellationToken cancellationToken = default)
+        protected async Task<IEnumerable<ExchangeRateEntity>> GetMonthlyRatesAsync(ForexProviders providers, (int year, int month) period = default, CancellationToken cancellationToken = default)
         {
-            var sb = new StringBuilder($"/v1/Banks/{bankId}/WeeklyRates/");
+            var sb = new StringBuilder($"/v1/Banks/{providers.BankId}/MonthlyRates/");
 
             if (period == default)
             {
@@ -108,14 +84,16 @@ namespace ExchangeRate.Core.Providers
                 sb.Append($"{period.year}/{period.month}");
             }
 
-            var exchangeRates = await GetExchangeRatesAsync(sb.ToString(), cancellationToken);
+            var exchangeRates = await GetExchangeRatesAsync(providers, sb.ToString(), cancellationToken);
 
-            return GetExchangeRates(exchangeRates, Source, ExchangeRateFrequencies.Weekly);
+            var testthissection = GetExchangeRates(exchangeRates, providers.Source, ExchangeRateFrequencies.Monthly);
+
+            return testthissection;
         }
 
-        protected async Task<IEnumerable<ExchangeRateEntity>> GetBiWeeklyRatesAsync(string bankId, (int year, int month) period = default, CancellationToken cancellationToken = default)
+        protected async Task<IEnumerable<ExchangeRateEntity>> GetWeeklyRatesAsync(ForexProviders providers, (int year, int month) period = default, CancellationToken cancellationToken = default)
         {
-            var sb = new StringBuilder($"/v1/Banks/{bankId}/BiweeklyRates/");
+            var sb = new StringBuilder($"/v1/Banks/{providers.BankId}/WeeklyRates/");
 
             if (period == default)
             {
@@ -126,9 +104,27 @@ namespace ExchangeRate.Core.Providers
                 sb.Append($"{period.year}/{period.month}");
             }
 
-            var exchangeRates = await GetExchangeRatesAsync(sb.ToString(), cancellationToken);
+            var exchangeRates = await GetExchangeRatesAsync(providers, sb.ToString(), cancellationToken);
 
-            return GetExchangeRates(exchangeRates, Source, ExchangeRateFrequencies.BiWeekly);
+            return GetExchangeRates(exchangeRates, providers.Source, ExchangeRateFrequencies.Weekly);
+        }
+
+        protected async Task<IEnumerable<ExchangeRateEntity>> GetBiWeeklyRatesAsync(ForexProviders providers, (int year, int month) period = default, CancellationToken cancellationToken = default)
+        {
+            var sb = new StringBuilder($"/v1/Banks/{providers.BankId}/BiweeklyRates/");
+
+            if (period == default)
+            {
+                sb.Append("Latest");
+            }
+            else
+            {
+                sb.Append($"{period.year}/{period.month}");
+            }
+
+            var exchangeRates = await GetExchangeRatesAsync(providers, sb.ToString(), cancellationToken);
+
+            return GetExchangeRates(exchangeRates, providers.Source, ExchangeRateFrequencies.BiWeekly);
         }
 
         private IEnumerable<ExchangeRateEntity> GetExchangeRates(ExchangeRates exchangeRates, ExchangeRateSources source, ExchangeRateFrequencies frequency)
@@ -160,13 +156,13 @@ namespace ExchangeRate.Core.Providers
                     }).Where(x => x.CurrencyId.HasValue));
         }
 
-        private async Task<ExchangeRates> GetExchangeRatesAsync(string requestUri, CancellationToken cancellationToken = default)
+        private async Task<ExchangeRates> GetExchangeRatesAsync(ForexProviders providers, string requestUri, CancellationToken cancellationToken = default)
         {
             //This is my own bit of code to simulate what the API will return
 
-            
+            /*
             string jsonString = @"{
-                ""BankId"":""ECB"",
+                ""BankId"":""EUECB"",
                 ""BaseCurrency"":""EUR"",
                 ""QuoteType"":""Direct"",
                 ""Rates"": {
@@ -187,14 +183,14 @@ namespace ExchangeRate.Core.Providers
 
             jsonString = @"
             {
-                ""bankId"": ""ECB"",
+                ""providers.BankId"": ""EUECB"",
                 ""baseCurrency"": ""EUR"",
                 ""quoteType"": ""Indirect"",
                 ""rates"": {
-                    ""2024-01-15T00:00:00"": {
-                        ""USD"": {""rate"": 1.08238}, 
-                        ""GBP"": {""rate"": 0.85647}, 
-                        ""JPY"": {""rate"": 159.24}
+                    ""2024-01-12T00:00:00"": {
+                        ""USD"": {""rate"": 1.0856}, 
+                        ""GBP"": {""rate"": 0.8572}, 
+                        ""JPY"": {""rate"": 161.12}
                     }, 
                     ""2024-02-02T00:00:00"": {
                         ""USD"": {""rate"": 1.08456}, 
@@ -214,7 +210,7 @@ namespace ExchangeRate.Core.Providers
             /**/
 
             //The original code continues from below
-            var token = await GetTokenAsync(cancellationToken);
+            var token = await GetTokenAsync(providers, cancellationToken);
 
             using var request = new HttpRequestMessage();
             request.Method = HttpMethod.Get;
@@ -229,8 +225,8 @@ namespace ExchangeRate.Core.Providers
                 var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 throw new HttpRequestException(
                     $"Exchange rate API request failed. " +
-                    $"BankId: {BankId}, " +
-                    $"Source: {Source}, " +
+                    $"BankId: {providers.BankId}, " +
+                    $"providers.Source: {providers.Source}, " +
                     $"RequestUri: {requestUri}, " +
                     $"StatusCode: {(int)response.StatusCode} ({response.StatusCode}), " +
                     $"ReasonPhrase: {response.ReasonPhrase}, " +
@@ -240,7 +236,7 @@ namespace ExchangeRate.Core.Providers
             return await response.Content.ReadFromJsonAsync<ExchangeRates>(_jsonSerializerOptions, cancellationToken);
         }
 
-        private async Task<string> GetTokenAsync(CancellationToken cancellationToken = default)
+        private async Task<string> GetTokenAsync(ForexProviders providers, CancellationToken cancellationToken = default)
         {
             using var tokenRequestContent = new FormUrlEncodedContent(
                 new Dictionary<string, string>
@@ -258,8 +254,8 @@ namespace ExchangeRate.Core.Providers
                 var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 throw new HttpRequestException(
                     $"Exchange rate API token request failed. " +
-                    $"BankId: {BankId}, " +
-                    $"Source: {Source}, " +
+                    $"BankId: {providers.BankId}, " +
+                    $"providers.Source: {providers.Source}, " +
                     $"TokenEndpoint: {_externalExchangeRateApiConfig.TokenEndpoint}, " +
                     $"ClientId: {_externalExchangeRateApiConfig.ClientId}, " +
                     $"StatusCode: {(int)response.StatusCode} ({response.StatusCode}), " +
@@ -278,7 +274,7 @@ namespace ExchangeRate.Core.Providers
 
         record ExchangeRates
         {
-            public string BankId { get; set; }
+            public ForexProviders providers { get; set; }
 
             public string BaseCurrency { get; set; }
 

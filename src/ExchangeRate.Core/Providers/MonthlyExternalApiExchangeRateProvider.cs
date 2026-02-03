@@ -5,7 +5,7 @@ using ExchangeRate.Core.Helpers;
 using ExchangeRate.Core.Interfaces.Providers;
 using ExchangeRate.Core.Models;
 using ExchangeRateEntity = ExchangeRate.Core.Entities.ExchangeRate;
-
+/*
 namespace ExchangeRate.Core.Providers
 {
     /// <summary>
@@ -44,4 +44,4 @@ namespace ExchangeRate.Core.Providers
             return AsyncUtil.RunSync(() => GetMonthlyRatesAsync(BankId));
         }
     }
-}
+}*/

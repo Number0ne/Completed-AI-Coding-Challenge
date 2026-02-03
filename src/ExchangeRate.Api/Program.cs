@@ -1,5 +1,6 @@
 using ExchangeRate.Api.Infrastructure;
 using ExchangeRate.Core;
+using ExchangeRate.Core.Entities;
 using ExchangeRate.Core.Enums;
 using ExchangeRate.Core.Infrastructure;
 using ExchangeRate.Core.Interfaces;
@@ -22,6 +23,9 @@ builder.Services.AddSingleton<ExternalExchangeRateApiConfig>(sp =>
     };
 });
 
+//Comment these out for now, I'll come back to them if I have to
+
+/*
 // Register HttpClient for providers
 builder.Services.AddHttpClient<EUECBExchangeRateProvider>();
 builder.Services.AddHttpClient<MXCBExchangeRateProvider>();
@@ -43,6 +47,15 @@ builder.Services.AddSingleton<MXCBExchangeRateProvider>(sp =>
     return new MXCBExchangeRateProvider(httpClient, config);
 });
 builder.Services.AddSingleton<IExchangeRateProvider>(sp => sp.GetRequiredService<MXCBExchangeRateProvider>());
+*/
+// Register HttpClient for providers
+builder.Services.AddHttpClient<CombinedExternalApiExchangeRateProvider>();
+
+builder.Services.AddSingleton<IExchangeRateProvider>(sp => {
+    var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(CombinedExternalApiExchangeRateProvider));
+    var config = sp.GetRequiredService<ExternalExchangeRateApiConfig>();
+    return new CombinedExternalApiExchangeRateProvider(httpClient, config);
+});
 
 // Register the provider factory
 builder.Services.AddSingleton<IExchangeRateProviderFactory, ExchangeRateProviderFactory>();
@@ -52,6 +65,12 @@ builder.Services.AddSingleton<IExchangeRateDataStore, InMemoryExchangeRateDataSt
 
 // Register the repository
 builder.Services.AddSingleton<IExchangeRateRepository, ExchangeRateRepository>();
+
+// Register the forex registered providers service
+builder.Services.AddSingleton<registeredProviders>();
+
+//This is to be able to use the combined class for fetching daily - weekly rates
+builder.Services.AddSingleton<CombinedExternalApiExchangeRateProvider>();
 
 var app = builder.Build();
 

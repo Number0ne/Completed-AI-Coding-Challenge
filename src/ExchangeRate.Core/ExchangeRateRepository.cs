@@ -7,6 +7,8 @@ using ExchangeRate.Core.Interfaces.Providers;
 using ExchangeRate.Core.Entities;
 using ExchangeRate.Core.Enums;
 using ExchangeRate.Core.Infrastructure;
+using ExchangeRate.Core.Providers;
+using System.Linq.Expressions;
 
 namespace ExchangeRate.Core
 {
@@ -28,6 +30,8 @@ namespace ExchangeRate.Core
         private readonly ILogger<ExchangeRateRepository> _logger;
         private readonly IExchangeRateProviderFactory _exchangeRateSourceFactory;
 
+        private readonly CombinedExternalApiExchangeRateProvider _providersCombinedExchange;
+
         static ExchangeRateRepository()
         {
             var currencies = System.Enum.GetValues(typeof(CurrencyTypes)).Cast<CurrencyTypes>().ToList();
@@ -45,11 +49,12 @@ namespace ExchangeRate.Core
             }).ToDictionary(x => x, _ => DateTime.MaxValue);
         }
 
-        public ExchangeRateRepository(IExchangeRateDataStore dataStore, ILogger<ExchangeRateRepository> logger, IExchangeRateProviderFactory exchangeRateSourceFactory)
+        public ExchangeRateRepository(IExchangeRateDataStore dataStore, ILogger<ExchangeRateRepository> logger, IExchangeRateProviderFactory exchangeRateSourceFactory, CombinedExternalApiExchangeRateProvider providersCombinedExchange)
         {
             _dataStore = dataStore ?? throw new ArgumentNullException(nameof(dataStore));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _exchangeRateSourceFactory = exchangeRateSourceFactory ?? throw new ArgumentNullException(nameof(exchangeRateSourceFactory));
+            _providersCombinedExchange = providersCombinedExchange;
 
             _fxRatesBySourceFrequencyAndCurrency = new Dictionary<(ExchangeRateSources, ExchangeRateFrequencies), Dictionary<CurrencyTypes, Dictionary<DateTime, decimal>>>();
             ResetMinFxDates();
@@ -73,175 +78,150 @@ namespace ExchangeRate.Core
         /// It will return a previously valid rate, if the database does not contain rate for the specified <paramref name="date"/>.
         /// It will return NULL if there is no rate at all for the <paramref name="toCurrency"/>.
         /// </summary>
-        public decimal? GetRate(CurrencyTypes fromCurrency, CurrencyTypes toCurrency, DateTime date, ExchangeRateSources source, ExchangeRateFrequencies frequency)
+        public decimal? GetRate(string fromCurrencyCode, string toCurrencyCode, DateTime date, ExchangeRateSources source, ExchangeRateFrequencies frequency)
         {
-            var provider = _exchangeRateSourceFactory.GetExchangeRateProvider(source);
-
-            if (toCurrency == fromCurrency)
-                return 1m;
-
-            date = date.Date;
-
-            var minFxDate = GetMinFxDate(date, source, frequency);
-
-            // If neither fromCurrency, nor toCurrency matches the provider's currency, we need to calculate cross rates
-            if (fromCurrency != provider.Currency && toCurrency != provider.Currency)
+            try
             {
-                return GetRate(fromCurrency, provider.Currency, date, source, frequency) * GetRate(provider.Currency, toCurrency, date, source, frequency);
-            }
+                var fromCurrency = GetCurrencyType(fromCurrencyCode);
 
-            CurrencyTypes lookupCurrency = default;
-            var result = GetFxRate(GetRatesByCurrency(source, frequency), date, minFxDate, provider, fromCurrency, toCurrency, out _);
+                var toCurrency = GetCurrencyType(toCurrencyCode);
 
-            if (result.IsSuccess)
-                return result.Value;
+                var provider = _exchangeRateSourceFactory.get_Supported_Forex_Providers_From_Enumerable(source);
 
-            // If no fx rate found for date, update rates in case some dates are missing between minFxDate and tax point date
-            if (result.Errors.FirstOrDefault() is NoFxRateFoundError)
-            {
-                UpdateRates(provider, minFxDate, date, source, frequency);
+                if (toCurrency == fromCurrency)
+                    return 1m;
 
-                result = GetFxRate(GetRatesByCurrency(source, frequency), date, minFxDate, provider, fromCurrency,
-                    toCurrency, out var currency);
+                date = date.Date;
+
+                var minFxDate = GetMinFxDate(date, provider, frequency);
+
+                // If neither fromCurrency, nor toCurrency matches the provider's currency, we need to calculate cross rates
+                if (fromCurrency != provider.Currency && toCurrency != provider.Currency)
+                {
+                    return GetRate(fromCurrency.ToString(), provider.Currency.ToString(), date, source, frequency) * GetRate(provider.Currency.ToString(), toCurrency.ToString(), date, source, frequency);
+                }
+
+                CurrencyTypes lookupCurrency = default;
+                var result = GetFxRate(GetRatesByCurrency(source, frequency), date, minFxDate, provider, fromCurrency, toCurrency, out _);
 
                 if (result.IsSuccess)
                     return result.Value;
 
-                lookupCurrency = currency;
+                // If no fx rate found for date, update rates in case some dates are missing between minFxDate and tax point date
+                if (result.Errors.FirstOrDefault() is NoFxRateFoundError)
+                {
+                    UpdateRates(provider, minFxDate, date, frequency);
+
+                    result = GetFxRate(GetRatesByCurrency(source, frequency), date, minFxDate, provider, fromCurrency,
+                        toCurrency, out var currency);
+
+                    if (result.IsSuccess)
+                        return result.Value;
+
+                    lookupCurrency = currency;
+                }
+
+                _logger.LogError("No {source} {frequency} exchange rate found for {lookupCurrency} on {date:yyyy-MM-dd}. Earliest available date: {minFxDate:yyyy-MM-dd}. FromCurrency: {fromCurrency}, ToCurrency: {toCurrency}", source, frequency, lookupCurrency, date, minFxDate, fromCurrency, toCurrency);
+                return null;
             }
-
-            _logger.LogError("No {source} {frequency} exchange rate found for {lookupCurrency} on {date:yyyy-MM-dd}. Earliest available date: {minFxDate:yyyy-MM-dd}. FromCurrency: {fromCurrency}, ToCurrency: {toCurrency}", source, frequency, lookupCurrency, date, minFxDate, fromCurrency, toCurrency);
-            return null;
-        }
-
-        /// <summary>
-        /// Returns the exchange rate for the <paramref name="currencyCode"/> on the given <paramref name="date"/>.
-        /// It will return a previously valid rate, if the database does not contain rate for the specified <paramref name="date"/>.
-        /// It will return NULL if there is no rate at all for the <paramref name="currencyCode"/>.
-        /// </summary>
-        public decimal? GetRate(string fromCurrencyCode, string toCurrencyCode, DateTime date, ExchangeRateSources source, ExchangeRateFrequencies frequency)
-        {
-            var fromCurrency = GetCurrencyType(fromCurrencyCode);
-
-            var toCurrency = GetCurrencyType(toCurrencyCode);
-
-            return GetRate(fromCurrency, toCurrency, date, source, frequency);
+            catch (Exception ex)
+            {
+                File.AppendAllText(@"/home/debian/Documents/Personal Projects/TestLogs.txt", ex.Message + ex.StackTrace);
+                return null;
+            }
         }
 
         /// <summary>
         /// Updates the exchange rates for the last available day/month.
         /// </summary>
-        public void UpdateRates()
+        public void UpdateRates(ForexProviders provider)
         {
-            foreach (var source in _exchangeRateSourceFactory.ListExchangeRateSources())
+            try
             {
-                try
+                var rates = new List<Entities.ExchangeRate>();
+
+                if (provider.updatesDaily)
+                    rates.AddRange(_providersCombinedExchange.GetDailyFxRates(provider).ToList());
+
+                if (provider.updatesMonthly)
+                    rates.AddRange(_providersCombinedExchange.GetMonthlyFxRates(provider).ToList());
+
+                if (provider.updatesWeekly)
+                    rates.AddRange(_providersCombinedExchange.GetWeeklyFxRates(provider).ToList());
+
+                if (provider.updatesBiWeekly)
+                    rates.AddRange(_providersCombinedExchange.GetBiWeeklyFxRates(provider).ToList());
+
+                if (provider is IWeeklyExchangeRateProvider weeklyProvider)
+                    rates.AddRange(weeklyProvider.GetWeeklyFxRates().ToList());
+
+                if (rates.Any())
                 {
-                    var provider = _exchangeRateSourceFactory.GetExchangeRateProvider(source);
+                    LoadRatesFromDb(PeriodHelper.GetStartOfMonth(rates.Min(x => x.Date!.Value)));
 
-                    var rates = new List<Entities.ExchangeRate>();
-
-                    if (provider is IDailyExchangeRateProvider dailyProvider)
-                        rates.AddRange(dailyProvider.GetDailyFxRates().ToList());
-
-                    if (provider is IMonthlyExchangeRateProvider monthlyProvider)
-                        rates.AddRange(monthlyProvider.GetMonthlyFxRates().ToList());
-
-                    if (provider is IWeeklyExchangeRateProvider weeklyProvider)
-                        rates.AddRange(weeklyProvider.GetWeeklyFxRates().ToList());
-
-                    if (provider is IBiWeeklyExchangeRateProvider biWeeklyProvider)
-                        rates.AddRange(biWeeklyProvider.GetBiWeeklyFxRates().ToList());
-
-                    if (rates.Any())
+                    var itemsToSave = new List<Entities.ExchangeRate>();
+                    foreach (var rate in rates)
                     {
-                        LoadRatesFromDb(PeriodHelper.GetStartOfMonth(rates.Min(x => x.Date!.Value)));
-
-                        var itemsToSave = new List<Entities.ExchangeRate>();
-                        foreach (var rate in rates)
-                        {
-                            if (AddRateToDictionaries(rate))
-                                itemsToSave.Add(rate);
-                        }
-
-                        if (itemsToSave.Any())
-                            _dataStore.SaveExchangeRatesAsync(itemsToSave).GetAwaiter().GetResult();
+                        if (AddRateToDictionaries(rate))
+                            itemsToSave.Add(rate);
                     }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to update daily rates for {source}", source.ToString());
+
+                    if (itemsToSave.Any())
+                        _dataStore.SaveExchangeRatesAsync(itemsToSave).GetAwaiter().GetResult();
                 }
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update daily rates for {source}", provider.Source.ToString());
+            }
+        }
+
+        private DateTime GetMinFxDate(DateTime date, ForexProviders provider, ExchangeRateFrequencies frequency)
+        {
+            if (!_minFxDateBySourceAndFrequency.TryGetValue((provider.Source, frequency), out var minFxDate))
+                throw new ExchangeRateException("Couldn't find base min FX date for source: " + provider.Source);
+
+            //This sets the minimum possible date which will usually be the start of the month for the date given
+            DateTime minDate = PeriodHelper.GetStartOfMonth(date);
+
+            // if the currently available date is higher than the requested date, then we need to get it from the database, or fill the database from the FX rate source
+            if (minFxDate > date)
+            {   
+                //simplified this aspect since it'll just pass the values into update rates and validation occurs there
+                EnsureMinimumDateRange(provider, minDate, frequency);
+            }
+
+            // Update minFxDate value after EnsureMinimumDateRange
+            _minFxDateBySourceAndFrequency.TryGetValue((provider.Source, frequency), out minFxDate);
+
+            return minFxDate;
         }
 
         /// <summary>
         /// Ensures that the database contains all exchange rates after <paramref name="minDate"/>.
         /// </summary>
-        public bool EnsureMinimumDateRange(DateTime minDate, IEnumerable<ExchangeRateSources> exchangeRateSources = null)
+        public bool EnsureMinimumDateRange(ForexProviders provider, DateTime minDate, ExchangeRateFrequencies frequency)
         {
-            var result = true;
-            foreach (var source in exchangeRateSources ?? _exchangeRateSourceFactory.ListExchangeRateSources())
-            {
-                var provider = _exchangeRateSourceFactory.GetExchangeRateProvider(source);
-                if (provider is IDailyExchangeRateProvider &&
-                    !EnsureMinimumDateRange(minDate, source, ExchangeRateFrequencies.Daily))
-                {
-                    result = false;
-                }
 
-                if (provider is IMonthlyExchangeRateProvider &&
-                    !EnsureMinimumDateRange(minDate, source, ExchangeRateFrequencies.Monthly))
-                {
-                    result = false;
-                }
+            //First we check if the source is available with the required update frequency. By default it should be but this is an exception handler
+            if (!_minFxDateBySourceAndFrequency.TryGetValue((provider.Source, frequency), out var minFxDate))
+                throw new ExchangeRateException($"Couldn't find min FX date for source {provider.Source} with frequency {frequency}");
 
-                if (provider is IWeeklyExchangeRateProvider &&
-                    !EnsureMinimumDateRange(minDate, source, ExchangeRateFrequencies.Weekly))
-                {
-                    result = false;
-                }
 
-                if (provider is IBiWeeklyExchangeRateProvider &&
-                    !EnsureMinimumDateRange(minDate, source, ExchangeRateFrequencies.BiWeekly))
-                {
-                    result = false;
-                }
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// Ensures that the database contains all exchange rates after <paramref name="minDate"/> for the given <paramref name="source"/> and <paramref name="frequency"/>.
-        /// </summary>
-        private bool EnsureMinimumDateRange(DateTime minDate, ExchangeRateSources source, ExchangeRateFrequencies frequency)
-        {
-            minDate = PeriodHelper.GetStartOfMonth(minDate);
-
-            var minFxDate = PeriodHelper.GetStartOfMonth(_minFxDateBySourceAndFrequency[(source, frequency)]);
+            //If the minfxdate is availabl then we get the start of the month for that paritular minimum forex date value
+            minFxDate = PeriodHelper.GetStartOfMonth(_minFxDateBySourceAndFrequency[(provider.Source, frequency)]);
 
             // if the minimum exchange rate date is lower than or equal to the specified date, then we don't need to update the rates
             if (minFxDate <= minDate)
                 return true;
 
+            //If its not then we load the rates from the database and then try again to check if the min Forex Date is available
             LoadRatesFromDb(minDate);
 
-            minFxDate = PeriodHelper.GetStartOfMonth(_minFxDateBySourceAndFrequency[(source, frequency)]);
-            if (minFxDate <= minDate)
-                return true;
+            //again we check if the minimum date has been updated with values from our database. By default it should be but this is an exception handler
+            if (!_minFxDateBySourceAndFrequency.TryGetValue((provider.Source, frequency), out minFxDate))
+                throw new ExchangeRateException($"Couldn't find min FX date for source {provider.Source} with frequency {frequency}");
 
-            var provider = _exchangeRateSourceFactory.GetExchangeRateProvider(source);
-
-            return EnsureMinimumDateRange(provider, minDate, source, frequency);
-        }
-
-        private bool EnsureMinimumDateRange(IExchangeRateProvider provider, DateTime minDate, ExchangeRateSources source, ExchangeRateFrequencies frequency)
-        {
-            if (!_minFxDateBySourceAndFrequency.TryGetValue((source, frequency), out var minFxDate))
-                throw new ExchangeRateException($"Couldn't find min FX date for source {source} with frequency {frequency}");
-
-            // if the minimum exchange rate date is lower than or equal to the specified date, then we don't need to update the rates
             if (minFxDate <= minDate)
                 return true;
 
@@ -251,10 +231,10 @@ namespace ExchangeRate.Core
             }
 
             // if there would still be missing FX rates, we need to collect them from the historical data source
-            return UpdateRates(provider, minDate, minFxDate, source, frequency);
+            return UpdateRates(provider, minDate, minFxDate, frequency);
         }
 
-        private bool UpdateRates(IExchangeRateProvider provider, DateTime minDate, DateTime minFxDate, ExchangeRateSources source, ExchangeRateFrequencies frequency)
+        private bool UpdateRates(ForexProviders provider, DateTime minDate, DateTime minFxDate, ExchangeRateFrequencies frequency)
         {
             var itemsToSave = new List<Entities.ExchangeRate>();
 
@@ -265,24 +245,24 @@ namespace ExchangeRate.Core
             switch (frequency)
             {
                 case ExchangeRateFrequencies.Daily:
-                    if (provider is not IDailyExchangeRateProvider dailyProvider)
+                    if (!provider.updatesDaily)
                         throw new ExchangeRateException($"Provider {provider} does not support frequency {frequency}");
-                    itemsToSave.AddRange(dailyProvider.GetHistoricalDailyFxRates(from, to).ToList());
+                    itemsToSave.AddRange(_providersCombinedExchange.GetHistoricalDailyFxRates(from, to, provider).ToList());
                     break;
                 case ExchangeRateFrequencies.Monthly:
-                    if (provider is not IMonthlyExchangeRateProvider monthlyProvider)
+                    if (!provider.updatesMonthly)
                         throw new ExchangeRateException($"Provider {provider} does not support frequency {frequency}");
-                    itemsToSave.AddRange(monthlyProvider.GetHistoricalMonthlyFxRates(from, to).ToList());
+                    itemsToSave.AddRange(_providersCombinedExchange.GetHistoricalMonthlyFxRates(from, to, provider).ToList());
                     break;
                 case ExchangeRateFrequencies.Weekly:
-                    if (provider is not IWeeklyExchangeRateProvider weeklyProvider)
+                    if (!provider.updatesWeekly)
                         throw new ExchangeRateException($"Provider {provider} does not support frequency {frequency}");
-                    itemsToSave.AddRange(weeklyProvider.GetHistoricalWeeklyFxRates(from, to).ToList());
+                    itemsToSave.AddRange(_providersCombinedExchange.GetHistoricalWeeklyFxRates(from, to, provider).ToList());
                     break;
                 case ExchangeRateFrequencies.BiWeekly:
-                    if (provider is not IBiWeeklyExchangeRateProvider biweeklyProvider)
+                    if (!provider.updatesBiWeekly)
                         throw new ExchangeRateException($"Provider {provider} does not support frequency {frequency}");
-                    itemsToSave.AddRange(biweeklyProvider.GetHistoricalBiWeeklyFxRates(from, to).ToList());
+                    itemsToSave.AddRange(_providersCombinedExchange.GetHistoricalBiWeeklyFxRates(from, to, provider).ToList());
                     break;
                 default:
                     throw new ExchangeRateException($"Unsupported frequency: {frequency}");
@@ -290,7 +270,7 @@ namespace ExchangeRate.Core
 
             if (itemsToSave.Count == 0)
             {
-                _logger.LogError("No historical data found between date {minDate:yyyy-MM-dd} and {v:yyyy-MM-dd} for source {source} with frequency {frequency}.", minDate, minFxDate, source, frequency);
+                _logger.LogError("No historical data found between date {minDate:yyyy-MM-dd} and {v:yyyy-MM-dd} for source {source} with frequency {frequency}.", minDate, minFxDate, provider.Source, frequency);
                 return false;
             }
 
@@ -303,7 +283,7 @@ namespace ExchangeRate.Core
                 if (item.Date!.Value < newMinFxDate)
                     newMinFxDate = item.Date.Value;
             }
-            _minFxDateBySourceAndFrequency[(source, frequency)] = newMinFxDate;
+            _minFxDateBySourceAndFrequency[(provider.Source, frequency)] = newMinFxDate;
 
             // if storing in memory was successful, we can save it to the database
             if (itemsToSave.Any())
@@ -317,7 +297,10 @@ namespace ExchangeRate.Core
         /// </summary>
         private void LoadRatesFromDb(DateTime minDate)
         {
+            //Gets the minimum forex date
             var minFxDate = _minFxDateBySourceAndFrequency.Min(x => x.Value);
+
+            //Retrieves the relevant exchange rates
             var fxRatesInDb = _dataStore.GetExchangeRatesAsync(minDate, minFxDate).GetAwaiter().GetResult();
 
             LoadRates(fxRatesInDb);
@@ -386,45 +369,45 @@ namespace ExchangeRate.Core
             IReadOnlyDictionary<CurrencyTypes, Dictionary<DateTime, decimal>> ratesByCurrencyAndDate,
             DateTime date,
             DateTime minFxDate,
-            IExchangeRateProvider provider,
+            ForexProviders provider,
             CurrencyTypes fromCurrency,
             CurrencyTypes toCurrency,
             out CurrencyTypes lookupCurrency)
         {
-                // Handle same-currency conversion (can happen in recursive pegged currency lookups)
-                if (fromCurrency == toCurrency)
+            // Handle same-currency conversion (can happen in recursive pegged currency lookups)
+            if (fromCurrency == toCurrency)
+            {
+                lookupCurrency = fromCurrency;
+                return Result.Ok(1m);
+            }
+
+            //  always need to find the rate for the currency that is not the provider's currency
+            lookupCurrency = toCurrency == provider.Currency ? fromCurrency : toCurrency;
+            var nonLookupCurrency = toCurrency == provider.Currency ? toCurrency : fromCurrency;
+
+            if (!ratesByCurrencyAndDate.TryGetValue(lookupCurrency, out var currencyDict))
+            {
+                if (!_peggedCurrencies.TryGetValue(lookupCurrency, out var peggedCurrency))
                 {
-                    lookupCurrency = fromCurrency;
-                    return Result.Ok(1m);
+                    return Result.Fail(new NotSupportedCurrencyError(lookupCurrency));
                 }
 
-                //  always need to find the rate for the currency that is not the provider's currency
-                lookupCurrency = toCurrency == provider.Currency ? fromCurrency : toCurrency;
-                var nonLookupCurrency = toCurrency == provider.Currency ? toCurrency : fromCurrency;
+                var peggedToCurrencyResult = GetFxRate(ratesByCurrencyAndDate, date, minFxDate, provider, nonLookupCurrency, peggedCurrency.PeggedTo!.Value, out _);
 
-                if (!ratesByCurrencyAndDate.TryGetValue(lookupCurrency, out var currencyDict))
+                if (peggedToCurrencyResult.IsFailed)
                 {
-                    if (!_peggedCurrencies.TryGetValue(lookupCurrency, out var peggedCurrency))
-                    {
-                        return Result.Fail(new NotSupportedCurrencyError(lookupCurrency));
-                    }
-
-                    var peggedToCurrencyResult = GetFxRate(ratesByCurrencyAndDate, date, minFxDate, provider, nonLookupCurrency, peggedCurrency.PeggedTo!.Value, out _);
-
-                    if (peggedToCurrencyResult.IsFailed)
-                    {
-                        return peggedToCurrencyResult;
-                    }
-
-                    var peggedRate = peggedCurrency.Rate!.Value;
-                    var resultRate = peggedToCurrencyResult.Value;
-
-                    return Result.Ok(toCurrency == provider.Currency
-                        ? peggedRate / resultRate
-                        : resultRate / peggedRate);
-
+                    return peggedToCurrencyResult;
                 }
-                // start looking for the date, and decreasing the date if no match found (but only until the minFxDate)
+
+                var peggedRate = peggedCurrency.Rate!.Value;
+                var resultRate = peggedToCurrencyResult.Value;
+
+                return Result.Ok(toCurrency == provider.Currency
+                    ? peggedRate / resultRate
+                    : resultRate / peggedRate);
+
+            }
+            // start looking for the date, and decreasing the date if no match found (but only until the minFxDate)
 
             for (var d = date; d >= minFxDate; d = d.AddDays(-1d))
             {
@@ -465,21 +448,6 @@ namespace ExchangeRate.Core
                 throw new ExchangeRateException("Not supported currency code: " + currencyCode);
 
             return currency;
-        }
-
-        private DateTime GetMinFxDate(DateTime date, ExchangeRateSources source, ExchangeRateFrequencies frequency)
-        {
-            if (!_minFxDateBySourceAndFrequency.TryGetValue((source, frequency), out var minFxDate))
-                throw new ExchangeRateException("Couldn't find base min FX date for source: " + source);
-
-            // if the currently available date is higher than the requested date, then we need to get it from the database, or fill the database from the FX rate source
-            if (minFxDate > date)
-                EnsureMinimumDateRange(date.AddMonths(-1), source, frequency);
-
-            // Update minFxDate value after EnsureMinimumDateRange
-            _minFxDateBySourceAndFrequency.TryGetValue((source, frequency), out minFxDate);
-
-            return minFxDate;
         }
 
         private IReadOnlyDictionary<CurrencyTypes, Dictionary<DateTime, decimal>> GetRatesByCurrency(ExchangeRateSources source, ExchangeRateFrequencies frequency)

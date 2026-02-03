@@ -1,7 +1,7 @@
 using System.Net.Http;
 using ExchangeRate.Core.Enums;
 using ExchangeRate.Core.Models;
-
+/*
 namespace ExchangeRate.Core.Providers
 {
     /// <summary>
@@ -52,3 +52,4 @@ namespace ExchangeRate.Core.Providers
         public override string BankId => "MXCB";
     }
 }
+*/

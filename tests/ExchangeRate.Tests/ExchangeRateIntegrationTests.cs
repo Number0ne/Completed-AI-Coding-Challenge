@@ -1,4 +1,5 @@
 #nullable enable
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using ExchangeRate.Api.Infrastructure;
@@ -10,6 +11,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
@@ -69,8 +71,6 @@ public class ExchangeRateIntegrationTests : IDisposable
         // Arrange
         var date = new DateTime(2024, 01, 15);
         var expectedUsdRate = 1.0856m;
-
-        Console.WriteLine("Got Here");
 
         _factory.SetupTokenEndpoint();
         _factory.SetupEcbDailyRatesEndpoint(date, new Dictionary<string, decimal>
@@ -173,6 +173,8 @@ public class ExchangeRateIntegrationTests : IDisposable
         // Act
         var response = await GetClient().GetAsync(
             $"/api/rates?from=EUR&to=USD&date={requestedDate:yyyy-MM-dd}&source={ExchangeRateSources.ECB}&frequency={ExchangeRateFrequencies.Daily}");
+
+        File.AppendAllText(@"/home/debian/Documents/Personal Projects/TestLogs.txt", JsonConvert.SerializeObject(response));
 
         // Assert - Should fall back to Friday's rate
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -991,7 +993,8 @@ public class ExchangeRateIntegrationTests : IDisposable
     /// Tests that very old date with no available data returns an error response.
     /// NOTE: The exact response code depends on implementation - could be 404 or 500.
     /// </summary>
-    [Fact(Skip = "Response varies by implementation - enable after implementing proper error handling")]
+    //[Fact(Skip = "Response varies by implementation - enable after implementing proper error handling")]
+    [Fact]
     public async Task GetRate_VeryOldDateNoData_ReturnsNotFound()
     {
         // Arrange
@@ -1004,6 +1007,8 @@ public class ExchangeRateIntegrationTests : IDisposable
         // Act
         var response = await GetClient().GetAsync(
             $"/api/rates?from=EUR&to=USD&date={veryOldDate:yyyy-MM-dd}&source={ExchangeRateSources.ECB}&frequency={ExchangeRateFrequencies.Daily}");
+
+        File.AppendAllText(@"/home/debian/Documents/Personal Projects/TestLogs.txt", JsonConvert.SerializeObject(response));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -1027,8 +1032,10 @@ public class ExchangeRateIntegrationTests : IDisposable
         var response = await GetClient().GetAsync(
             $"/api/rates?from=INVALID&to=USD&date={date:yyyy-MM-dd}&source={ExchangeRateSources.ECB}&frequency={ExchangeRateFrequencies.Daily}");
 
+        File.AppendAllText(@"/home/debian/Documents/Personal Projects/TestLogs.txt", JsonConvert.SerializeObject(response));
+
         // Assert - Invalid currency code throws exception
-        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.NotFound);
     }
 
     /// <summary>
@@ -1046,7 +1053,7 @@ public class ExchangeRateIntegrationTests : IDisposable
             $"/api/rates?from=EUR&to=INVALID&date={date:yyyy-MM-dd}&source={ExchangeRateSources.ECB}&frequency={ExchangeRateFrequencies.Daily}");
 
         // Assert - Invalid currency code throws exception
-        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.NotFound);
     }
 
     /// <summary>
@@ -1063,8 +1070,10 @@ public class ExchangeRateIntegrationTests : IDisposable
         var response = await GetClient().GetAsync(
             $"/api/rates?from=&to=USD&date={date:yyyy-MM-dd}&source={ExchangeRateSources.ECB}&frequency={ExchangeRateFrequencies.Daily}");
 
+        File.AppendAllText(@"/home/debian/Documents/Personal Projects/TestLogs.txt", JsonConvert.SerializeObject(response));
+
         // Assert - Empty string is invalid and handled by ASP.NET
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.InternalServerError);
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.NotFound);
     }
 
     #endregion
@@ -1406,6 +1415,13 @@ public class ExchangeRateApiFactory : WebApplicationFactory<Program>
                 $"\"{r.Key}\": {{\"rate\": {r.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}");
             ratesEntries.Add($"\"{date:yyyy-MM-dd}T00:00:00\": {{{string.Join(", ", currencyEntries)}}}");
         }
+
+        File.AppendAllText(@"/home/debian/Documents/Personal Projects/TestLogs.txt", $@"{{
+            ""bankId"": ""{bankId}"",
+            ""baseCurrency"": ""{baseCurrency}"",
+            ""quoteType"": ""{quoteType}"",
+            ""rates"": {{{string.Join(", ", ratesEntries)}}}
+        }}");
 
         return $@"{{
             ""bankId"": ""{bankId}"",

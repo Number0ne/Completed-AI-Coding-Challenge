@@ -4,12 +4,6 @@ namespace ExchangeRate.Core.Interfaces.Providers;
 
 public interface IExchangeRateProvider
 {
-    CurrencyTypes Currency { get; }
-
-    QuoteTypes QuoteType { get; }
-
-    ExchangeRateSources Source { get; }
-
     ExchangeRateCalculationMethods DefaultCalculationMethod => this switch
     {
         IDailyExchangeRateProvider => ExchangeRateCalculationMethods.Daily,
