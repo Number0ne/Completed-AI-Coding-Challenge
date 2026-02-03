@@ -28,7 +28,7 @@ I also removed the second get rate function and merged it into the main one with
 
 ## ---- ##
 
-If a different rate has been returned for a specific time then instead of throwing an error the object is updated in the dictionary. in the AddRateToDictionaries function.
+If a different rate has been returned for a specific time then instead of throwing an error the object is updated in the dictionary. in the AddRateToDictionaries function. I also had to make changes to the functions at the end of the tests like the invalid currency code one because the response it was expecting was an error 500 but the system returns a better error 404
 
 # Database
 
