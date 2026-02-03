@@ -179,7 +179,7 @@ External providers have strict rate limits. We must avoid making individual API 
 We frequently receive corrected rates from banks after the fact. The system must be able to overwrite/update an existing rate in the database without requiring a full cache clear or manual intervention.
 
 # Solution Summary
-Firstly most of the code was written by me. Claude Code was a great help with understanding some parts of the code and the logic of how the forex works.
+Firstly most of the code was written by me. Claude Code was a great help with understanding some parts of the code and the logic of how the forex works. It also gave me a comprehensive guide on how to refactor code which I used as a guideline to how I approached this exercise
 
 ## ---- ##
 
