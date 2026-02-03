@@ -206,6 +206,10 @@ For the providers the functions to get their rates either weekly or daily or any
 
 I also removed the second get rate function and merged it into the main one with more parameters because there was no need for another smaller function taking up space and complexity when it is about 3 lines of code to add it to the main GetRate() function
 
+## ---- ##
+
+If a different rate has been returned for a specific time then instead of throwing an error the object is updated in the dictionary. in the AddRateToDictionaries function.
+
 # Database
 
 I plan on adding a database to this application using EF but let me hand in my application first so at least I get the process kick started while I work on this. Overall it has been great working on this and a little jolt my brain needed.
