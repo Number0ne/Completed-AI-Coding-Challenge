@@ -4,7 +4,6 @@ using ExchangeRate.Core.Entities;
 using ExchangeRate.Core.Enums;
 using ExchangeRate.Core.Infrastructure;
 using ExchangeRate.Core.Interfaces;
-using ExchangeRate.Core.Interfaces.Providers;
 using ExchangeRate.Core.Models;
 using ExchangeRate.Core.Providers;
 
@@ -51,7 +50,7 @@ builder.Services.AddSingleton<IExchangeRateProvider>(sp => sp.GetRequiredService
 // Register HttpClient for providers
 builder.Services.AddHttpClient<CombinedExternalApiExchangeRateProvider>();
 
-builder.Services.AddSingleton<IExchangeRateProvider>(sp => {
+builder.Services.AddSingleton<CombinedExternalApiExchangeRateProvider>(sp => {
     var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(CombinedExternalApiExchangeRateProvider));
     var config = sp.GetRequiredService<ExternalExchangeRateApiConfig>();
     return new CombinedExternalApiExchangeRateProvider(httpClient, config);

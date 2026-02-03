@@ -3,7 +3,6 @@ using FluentResults;
 using ExchangeRate.Core.Exceptions;
 using ExchangeRate.Core.Helpers;
 using ExchangeRate.Core.Interfaces;
-using ExchangeRate.Core.Interfaces.Providers;
 using ExchangeRate.Core.Entities;
 using ExchangeRate.Core.Enums;
 using ExchangeRate.Core.Infrastructure;
@@ -151,9 +150,6 @@ namespace ExchangeRate.Core
 
                 if (provider.updatesBiWeekly)
                     rates.AddRange(_providersCombinedExchange.GetBiWeeklyFxRates(provider).ToList());
-
-                if (provider is IWeeklyExchangeRateProvider weeklyProvider)
-                    rates.AddRange(weeklyProvider.GetWeeklyFxRates().ToList());
 
                 if (rates.Any())
                 {

@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using ExchangeRate.Core.Entities;
 using ExchangeRate.Core.Enums;
-using ExchangeRate.Core.Interfaces.Providers;
 using ExchangeRate.Core.Models;
 using ExchangeRateEntity = ExchangeRate.Core.Entities.ExchangeRate;
 
@@ -20,7 +19,7 @@ namespace ExchangeRate.Core.Providers
     /// <summary>
     /// Base class for all external API exchange rate providers.
     /// </summary>
-    public abstract class ExternalApiExchangeRateProvider : IExchangeRateProvider
+    public abstract class ExternalApiExchangeRateProvider
     {
         private static readonly Dictionary<string, CurrencyTypes> CurrencyMapping;
 

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using ExchangeRate.Core.Entities;
 using ExchangeRate.Core.Enums;
-using ExchangeRate.Core.Interfaces.Providers;
 
 namespace ExchangeRate.Core.Interfaces
 {

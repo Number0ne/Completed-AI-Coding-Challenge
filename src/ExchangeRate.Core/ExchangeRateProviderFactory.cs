@@ -4,20 +4,17 @@ using System.Linq;
 using ExchangeRate.Core.Entities;
 using ExchangeRate.Core.Enums;
 using ExchangeRate.Core.Interfaces;
-using ExchangeRate.Core.Interfaces.Providers;
 
 namespace ExchangeRate.Core
 {
     class ExchangeRateProviderFactory : IExchangeRateProviderFactory
     {
-        private readonly List<IExchangeRateProvider> _exchangeRateProviders;
         private readonly IServiceProvider _serviceProvider;
         //This is to reference / instantiate the newly created forex providers class
         private readonly registeredProviders _Providers;
 
-        public ExchangeRateProviderFactory(IEnumerable<IExchangeRateProvider> exchangeRateProviders, IServiceProvider serviceProvider, registeredProviders Providers)
+        public ExchangeRateProviderFactory(IServiceProvider serviceProvider, registeredProviders Providers)
         {
-            _exchangeRateProviders = exchangeRateProviders.ToList();
             _serviceProvider = serviceProvider;
             _Providers = Providers;
         }
