@@ -22,34 +22,10 @@ builder.Services.AddSingleton<ExternalExchangeRateApiConfig>(sp =>
     };
 });
 
-//Comment these out for now, I'll come back to them if I have to
-
-/*
-// Register HttpClient for providers
-builder.Services.AddHttpClient<EUECBExchangeRateProvider>();
-builder.Services.AddHttpClient<MXCBExchangeRateProvider>();
-
-// Register all exchange rate providers - both as interface and concrete type
-// The factory resolves by concrete type, so we need both registrations
-builder.Services.AddSingleton<EUECBExchangeRateProvider>(sp =>
-{
-    var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(EUECBExchangeRateProvider));
-    var config = sp.GetRequiredService<ExternalExchangeRateApiConfig>();
-    return new EUECBExchangeRateProvider(httpClient, config);
-});
-builder.Services.AddSingleton<IExchangeRateProvider>(sp => sp.GetRequiredService<EUECBExchangeRateProvider>());
-
-builder.Services.AddSingleton<MXCBExchangeRateProvider>(sp =>
-{
-    var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(MXCBExchangeRateProvider));
-    var config = sp.GetRequiredService<ExternalExchangeRateApiConfig>();
-    return new MXCBExchangeRateProvider(httpClient, config);
-});
-builder.Services.AddSingleton<IExchangeRateProvider>(sp => sp.GetRequiredService<MXCBExchangeRateProvider>());
-*/
 // Register HttpClient for providers
 builder.Services.AddHttpClient<CombinedExternalApiExchangeRateProvider>();
 
+//This is to be able to use the combined class for fetching daily - weekly rates
 builder.Services.AddSingleton<CombinedExternalApiExchangeRateProvider>(sp => {
     var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(CombinedExternalApiExchangeRateProvider));
     var config = sp.GetRequiredService<ExternalExchangeRateApiConfig>();
@@ -67,9 +43,6 @@ builder.Services.AddSingleton<IExchangeRateRepository, ExchangeRateRepository>()
 
 // Register the forex registered providers service
 builder.Services.AddSingleton<registeredProviders>();
-
-//This is to be able to use the combined class for fetching daily - weekly rates
-builder.Services.AddSingleton<CombinedExternalApiExchangeRateProvider>();
 
 var app = builder.Build();
 
