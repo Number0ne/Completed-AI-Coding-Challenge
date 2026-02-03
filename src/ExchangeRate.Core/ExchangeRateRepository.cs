@@ -348,8 +348,13 @@ namespace ExchangeRate.Core
             {
                 if (decimal.Round(newRate, Entities.ExchangeRate.Precision) != decimal.Round(savedRate, Entities.ExchangeRate.Precision))
                 {
-                    _logger.LogError("Saved exchange rate differs from new value. Currency: {currency}. Saved rate: {savedRate}. New rate: {newRate}. Source: {source}. Frequency: {frequency}", currency, savedRate, newRate, source, frequency);
-                    throw new ExchangeRateException($"_fxRatesByCurrency already contains rate for {currency}-{date:yyyy-MMdd}. Source: {source}. Frequency: {frequency}");
+                    //This is where I'll update the exchange rate with the new value that is just provided cause the assumption is that the new rate is always the most up to date
+                    datesByCurrency[date] = newRate;
+
+                    return true;
+
+                    //_logger.LogError("Saved exchange rate differs from new value. Currency: {currency}. Saved rate: {savedRate}. New rate: {newRate}. Source: {source}. Frequency: {frequency}", currency, savedRate, newRate, source, frequency);
+                    //throw new ExchangeRateException($"_fxRatesByCurrency already contains rate for {currency}-{date:yyyy-MMdd}. Source: {source}. Frequency: {frequency}");
                 }
 
                 return false;
