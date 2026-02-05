@@ -11,6 +11,7 @@ using System.Linq.Expressions;
 using ExchangeRate.Core.Models;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 namespace ExchangeRate.Core
 {
@@ -98,7 +99,7 @@ namespace ExchangeRate.Core
 
                 var minFxDate = GetMinFxDate(date, provider, frequency);
 
-                // If neither fromCurrency, nor toCurrency matches the provider's currency, we need to calculate cross rates
+                //If from currency and to currency doesn't match the providers currency then we try to calculate cross currency rates assuming the source provides the relevant currencies
                 if (fromCurrency != provider.Currency && toCurrency != provider.Currency)
                 {
                     return GetRate(fromCurrency.ToString(), provider.Currency.ToString(), date, source, frequency) * GetRate(provider.Currency.ToString(), toCurrency.ToString(), date, source, frequency);
