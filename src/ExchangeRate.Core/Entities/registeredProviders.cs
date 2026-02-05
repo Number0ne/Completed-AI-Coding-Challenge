@@ -27,10 +27,4 @@ namespace ExchangeRate.Core.Entities
     {
         public List<ForexProviders> providers { get; set; }
     };
-
-    //This is a simple function in the class that will get all the registered providers who can provide forex values
-    //public List<ForexProviders> getList()
-    /*{
-        return InitialProvidersData;
-    }*/
 }

@@ -425,7 +425,7 @@ namespace ExchangeRate.Core
         {
             //This is the how far back in days that an exchange rate can be gotten
             int Exchange_Rate_Leeway = 30;
-            
+
             // Handle same-currency conversion (can happen in recursive pegged currency lookups)
             if (fromCurrency == toCurrency)
             {
@@ -466,11 +466,11 @@ namespace ExchangeRate.Core
                     : resultRate / peggedRate);
 
             }
-            // start looking for the date, and decreasing the date if no match found (but only until the minFxDate)
 
             //This section of the code ensures that in the event where minFxDate is less than 7 days ago then no exchange rate is returned because it is too outdated.
-            var date_to_use = minFxDate < date.AddDays(-Exchange_Rate_Leeway) ? date.AddDays(-Exchange_Rate_Leeway) : minFxDate; 
+            var date_to_use = minFxDate < date.AddDays(-Exchange_Rate_Leeway) ? date.AddDays(-Exchange_Rate_Leeway) : minFxDate;
 
+            // start looking for the date, and decreasing the date if no match found (but only until the minFxDate)
             for (var d = date; d >= date_to_use; d = d.AddDays(-1d))
             {
                 var new_forex_object_to_check = ratesByCurrencyAndDate.OrderByDescending(s => s.transactionDate).FirstOrDefault(s => s.currencyType == internal_lookupCurrency && s.transactionDate <= date);
@@ -478,30 +478,37 @@ namespace ExchangeRate.Core
                 if (new_forex_object_to_check?.transactionDate == d)
                 {
                     var temporary_rate_to_return = new_forex_object_to_check.rate;
-                    /*
+
+                    return Result.Ok(Calculate_FX_Rates(provider, toCurrency, fromCurrency, temporary_rate_to_return));
+                }
+            }
+
+            return Result.Fail(new NoFxRateFoundError());
+        }
+
+        //The calculate function has been moved out so it can be evaluated by itself
+        private decimal Calculate_FX_Rates(ForexProviders provider, CurrencyTypes toCurrency, CurrencyTypes fromCurrency, decimal rate)
+        {
+            /*
                        If your local currency is EUR:
                        - Direct exchange rate: 1 USD = 0.92819 EUR
                        - Indirect exchange rate: 1 EUR = 1.08238 USD
                     */
 
-                    // QuoteType    ProviderCurrency    FromCurrency    ToCurrency    Rate
-                    // Direct       EUR                 USD             EUR           fxRate
-                    // Direct       EUR                 EUR             USD           1/fxRate
-                    // InDirect     EUR                 USD             EUR           1/fxRate
-                    // InDirect     EUR                 EUR             USD           fxRate
+            // QuoteType    ProviderCurrency    FromCurrency    ToCurrency    Rate
+            // Direct       EUR                 USD             EUR           fxRate
+            // Direct       EUR                 EUR             USD           1/fxRate
+            // InDirect     EUR                 USD             EUR           1/fxRate
+            // InDirect     EUR                 EUR             USD           fxRate
 
-                    return provider.QuoteType switch
-                    {
-                        QuoteTypes.Direct when toCurrency == provider.Currency => Result.Ok(temporary_rate_to_return),
-                        QuoteTypes.Direct when fromCurrency == provider.Currency => Result.Ok(1 / temporary_rate_to_return),
-                        QuoteTypes.Indirect when fromCurrency == provider.Currency => Result.Ok(temporary_rate_to_return),
-                        QuoteTypes.Indirect when toCurrency == provider.Currency => Result.Ok(1 / temporary_rate_to_return),
-                        _ => throw new InvalidOperationException("Unsupported QuoteType")
-                    };
-                }
-            }
-
-            return Result.Fail(new NoFxRateFoundError());
+            return provider.QuoteType switch
+            {
+                QuoteTypes.Direct when toCurrency == provider.Currency => rate,
+                QuoteTypes.Direct when fromCurrency == provider.Currency => 1 / rate,
+                QuoteTypes.Indirect when fromCurrency == provider.Currency => rate,
+                QuoteTypes.Indirect when toCurrency == provider.Currency => 1 / rate,
+                _ => throw new InvalidOperationException("Unsupported QuoteType")
+            };
         }
 
         private static CurrencyTypes GetCurrencyType(string currencyCode)
