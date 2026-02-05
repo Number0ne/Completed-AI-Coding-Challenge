@@ -36,6 +36,19 @@ I also removed the second get rate function and merged it into the main one with
 
 If a different rate has been returned for a specific time then instead of throwing an error the object is updated in the dictionary. in the AddRateToDictionaries function. I also had to make changes to the functions at the end of the tests like the invalid currency code one because the response it was expecting was an error 500 but the system returns a better error 404
 
+## -- NEW ADDITION -- ##
+
+Updated the codebase to include the additional files
+
+Added a new file called ForexModels and this holds the model to be used instead of the nested dictionary "Dictionary<(ExchangeRateSources, ExchangeRateFrequencies), Dictionary<CurrencyTypes, Dictionary<DateTime, decimal>>> _fxRatesBySourceFrequencyAndCurrency;
+        private Dictionary<(ExchangeRateSources, ExchangeRateFrequencies), DateTime> _minFxDateBySourceAndFrequency;" 
+
+This makes the code vastly more readable as objects are easy to follow. Debugging is easy as you can look at the parameters of the object and print it as a json easily and more importantly it can be passed around to different classes in different files
+
+Also updated the memory store in the program.cs file to update the rate if it exists in the database.
+
+Made changes to the EnsureMinimumDateRange function so if a rate is not found and there is no corresponding rate for the item then the default date passed is the end of the month not the current date. This will ensure that the External API only fetches the relevant month data not the half a year data it currently fetches.
+
 # Database
 
 I plan on adding a database to this application using EF but let me hand in my application first so at least I get the process kick started while I work on this. Overall it has been great working on this and a little jolt my brain needed.

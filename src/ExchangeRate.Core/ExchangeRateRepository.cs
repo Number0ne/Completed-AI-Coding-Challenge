@@ -251,7 +251,8 @@ namespace ExchangeRate.Core
 
             if (minFxDate == DateTime.MaxValue)
             {
-                minFxDate = DateTime.UtcNow.Date;
+                //This change here ensures that only the data from the start of the month to the end of the month will be fetched
+                minFxDate = PeriodHelper.GetEndOfMonth(minDate);
             }
 
             // if there would still be missing FX rates, we need to collect them from the historical data source
