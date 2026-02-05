@@ -56,6 +56,10 @@ Made changes to the EnsureMinimumDateRange function so if a rate is not found an
 
 Moved the class that handles the memory store out of the program.cs file and into a new class called DatabaseStore. This can be edited or renamed later depending on the use cases
 
+## -- NEW ADDITION -- ##
+
+Made changes to the API endpoint in the program.cs file so if any parameter is not provided or is not in the correct format then the API will throw an error message and also link them to the documentation so they can get the proper format and test again
+
 # Database
 
 I plan on adding a database to this application using EF but let me hand in my application first so at least I get the process kick started while I work on this. Overall it has been great working on this and a little jolt my brain needed.
