@@ -52,6 +52,10 @@ Also updated the memory store in the program.cs file to update the rate if it ex
 
 Made changes to the EnsureMinimumDateRange function so if a rate is not found and there is no corresponding rate for the item then the default date passed is the end of the month not the current date. This will ensure that the External API only fetches the relevant month data not the half a year data it currently fetches.
 
+## -- NEW ADDITION -- ##
+
+Moved the class that handles the memory store out of the program.cs file and into a new class called DatabaseStore. This can be edited or renamed later depending on the use cases
+
 # Database
 
 I plan on adding a database to this application using EF but let me hand in my application first so at least I get the process kick started while I work on this. Overall it has been great working on this and a little jolt my brain needed.
