@@ -26,7 +26,8 @@ builder.Services.AddSingleton<ExternalExchangeRateApiConfig>(sp =>
 builder.Services.AddHttpClient<CombinedExternalApiExchangeRateProvider>();
 
 //This is to be able to use the combined class for fetching daily - weekly rates
-builder.Services.AddSingleton<CombinedExternalApiExchangeRateProvider>(sp => {
+builder.Services.AddSingleton<CombinedExternalApiExchangeRateProvider>(sp =>
+{
     var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(CombinedExternalApiExchangeRateProvider));
     var config = sp.GetRequiredService<ExternalExchangeRateApiConfig>();
     return new CombinedExternalApiExchangeRateProvider(httpClient, config);
@@ -48,21 +49,50 @@ var app = builder.Build();
 
 // GET /api/rates?from={currency}&to={currency}&date={date}&source={source}&frequency={frequency}
 app.MapGet("/api/rates", (
-    string from,
-    string to,
-    DateTime date,
-    ExchangeRateSources source,
-    ExchangeRateFrequencies frequency,
+    string? from,
+    string? to,
+    DateTime? date,
+    ExchangeRateSources? source,
+    ExchangeRateFrequencies? frequency,
     IExchangeRateRepository repository) =>
 {
-    var rate = repository.GetRate(from, to, date, source, frequency);
+    //This is just a validation reigon to provide a response to the client if the parameters are missing
+    #region Validation
+    
+    //This is a placeholder for the documentation
+    string visit_documentation = "Documentation: https://api.documentation.example.com";
+
+    if (string.IsNullOrEmpty(from))
+    {
+        return Results.BadRequest(new { error = "Pls provide a currency code for the parameter from. E.g USD. "+ visit_documentation });
+    }
+    if (string.IsNullOrEmpty(to))
+    {
+        return Results.BadRequest(new { error = "Pls provide a currency code for the parameter to. E.g USD. "+ visit_documentation });
+    }
+    if (date == default || date == null)
+    {
+        return Results.BadRequest(new { error = "Please provide the date to receive the exchange rate for that specific day E.g 2024-01-11. "+ visit_documentation });
+    }
+    if (source == null)
+    {
+        return Results.BadRequest(new { error = "Please provide a source to get the exchange rate from. E.g ECB. "+ visit_documentation });
+    }
+    if (frequency == null)
+    {
+        return Results.BadRequest(new { error = "Please provide the update frequency from the source you are using. E.g Daily. "+ visit_documentation });
+    }
+    #endregion
+
+
+    var rate = repository.GetRate(from, to, date.Value, source.Value, frequency.Value);
 
     if (rate == null)
     {
         return Results.NotFound(new { error = $"No exchange rate found for {from} to {to} on {date:yyyy-MM-dd}" });
     }
 
-    return Results.Ok(new ExchangeRateResponse(from, to, date, source.ToString(), frequency.ToString(), rate.Value));
+    return Results.Ok(new ExchangeRateResponse(from, to, date.Value, source.Value.ToString(), frequency.Value.ToString(), rate.Value));
 });
 
 app.Run();
