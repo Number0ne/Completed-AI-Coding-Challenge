@@ -22,6 +22,17 @@ builder.Services.AddSingleton<ExternalExchangeRateApiConfig>(sp =>
     };
 });
 
+builder.Configuration.AddJsonFile("RegisteredProviders.json",
+    optional: false,
+    reloadOnChange: true);
+
+//This is the configuration for the registered providers json file so it can read it into the app and use it
+builder.Services.AddSingleton<registeredProviders>(sp =>
+{
+    var config = builder.Configuration.GetSection("registeredProviders").Get<registeredProviders>();
+    return config;
+});
+
 // Register HttpClient for providers
 builder.Services.AddHttpClient<CombinedExternalApiExchangeRateProvider>();
 
@@ -42,10 +53,21 @@ builder.Services.AddSingleton<IExchangeRateDataStore, InMemoryExchangeRateDataSt
 // Register the repository
 builder.Services.AddSingleton<IExchangeRateRepository, ExchangeRateRepository>();
 
-// Register the forex registered providers service
-builder.Services.AddSingleton<registeredProviders>();
-
 var app = builder.Build();
+
+// TEST: Try to resolve the service manually
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var service = scope.ServiceProvider.GetRequiredService<registeredProviders>();
+        Console.WriteLine("✓ Service resolved successfully!");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"✗ Failed to resolve service: {ex.Message}");
+    }
+}
 
 // GET /api/rates?from={currency}&to={currency}&date={date}&source={source}&frequency={frequency}
 app.MapGet("/api/rates", (
@@ -58,29 +80,29 @@ app.MapGet("/api/rates", (
 {
     //This is just a validation reigon to provide a response to the client if the parameters are missing
     #region Validation
-    
+
     //This is a placeholder for the documentation
     string visit_documentation = "Documentation: https://api.documentation.example.com";
 
     if (string.IsNullOrEmpty(from))
     {
-        return Results.BadRequest(new { error = "Pls provide a currency code for the parameter from. E.g USD. "+ visit_documentation });
+        return Results.BadRequest(new { error = "Pls provide a currency code for the parameter from. E.g USD. " + visit_documentation });
     }
     if (string.IsNullOrEmpty(to))
     {
-        return Results.BadRequest(new { error = "Pls provide a currency code for the parameter to. E.g USD. "+ visit_documentation });
+        return Results.BadRequest(new { error = "Pls provide a currency code for the parameter to. E.g USD. " + visit_documentation });
     }
     if (date == default || date == null)
     {
-        return Results.BadRequest(new { error = "Please provide the date to receive the exchange rate for that specific day E.g 2024-01-11. "+ visit_documentation });
+        return Results.BadRequest(new { error = "Please provide the date to receive the exchange rate for that specific day E.g 2024-01-11. " + visit_documentation });
     }
     if (source == null)
     {
-        return Results.BadRequest(new { error = "Please provide a source to get the exchange rate from. E.g ECB. "+ visit_documentation });
+        return Results.BadRequest(new { error = "Please provide a source to get the exchange rate from. E.g ECB. " + visit_documentation });
     }
     if (frequency == null)
     {
-        return Results.BadRequest(new { error = "Please provide the update frequency from the source you are using. E.g Daily. "+ visit_documentation });
+        return Results.BadRequest(new { error = "Please provide the update frequency from the source you are using. E.g Daily. " + visit_documentation });
     }
     #endregion
 

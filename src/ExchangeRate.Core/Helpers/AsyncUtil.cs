@@ -38,5 +38,19 @@ namespace ExchangeRate.Core.Helpers
                 .GetAwaiter()
                 .GetResult();
         }
+
+        ///
+        /// This is a class that will convert an ienumerator to an enumerator
+        /// 
+
+        public static async Task<List<T>> Get_Enumerable_From_IEnumerable<T>(this IAsyncEnumerable<T> enumerable)
+        {
+            var result = new List<T>();
+            await foreach (var item in enumerable)
+            {
+                result.Add(item);
+            }
+            return result;
+        }
     }
 }

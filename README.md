@@ -60,6 +60,16 @@ Moved the class that handles the memory store out of the program.cs file and int
 
 Made changes to the API endpoint in the program.cs file so if any parameter is not provided or is not in the correct format then the API will throw an error message and also link them to the documentation so they can get the proper format and test again
 
+## -- NEW ADDITION -- ##
+
+Changed the function in CombinedExternalApiExchangeRateProvider.cs that were calling async functions e.g getdailyexchangerateasync to now be async so there is no deadlock or any unexpected behaviours like missed errors and the like.
+
+To aid with this I created a mini helper class, Get_Enumerable_From_IEnumerable that I then called throughout the main ExchangeRateRepository class 
+
+## -- NEW ADDITION -- ##
+
+To handle the case where an exchange rate is too old I put a check where if the minFxDate is less than 7 days ago then it isn't used for the forex calculation. This is a good balance of failure proofing and also some leeway for the clients using the system. The variable is Exchange_Rate_Leeway
+
 # Database
 
 I plan on adding a database to this application using EF but let me hand in my application first so at least I get the process kick started while I work on this. Overall it has been great working on this and a little jolt my brain needed.

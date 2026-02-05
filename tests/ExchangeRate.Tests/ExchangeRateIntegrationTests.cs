@@ -775,6 +775,8 @@ public class ExchangeRateIntegrationTests : IDisposable
         var response = await GetClient().GetAsync(
             $"/api/rates?from=EUR&to=MXN&date={date:yyyy-MM-dd}&source={ExchangeRateSources.MXCB}&frequency={ExchangeRateFrequencies.Monthly}");
 
+        File.AppendAllText(@"/home/debian/Documents/Personal Projects/TestLogs.txt", JsonConvert.SerializeObject(response));
+
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<ExchangeRateResponse>();

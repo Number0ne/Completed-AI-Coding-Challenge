@@ -145,16 +145,16 @@ namespace ExchangeRate.Core
                 var rates = new List<Entities.ExchangeRate>();
 
                 if (provider.updatesDaily)
-                    rates.AddRange(_providersCombinedExchange.GetDailyFxRates(provider).ToList());
+                    rates.AddRange(_providersCombinedExchange.GetDailyFxRates(provider));
 
                 if (provider.updatesMonthly)
-                    rates.AddRange(_providersCombinedExchange.GetMonthlyFxRates(provider).ToList());
+                    rates.AddRange(AsyncUtil.Get_Enumerable_From_IEnumerable(_providersCombinedExchange.GetMonthlyFxRates(provider)).Result);
 
                 if (provider.updatesWeekly)
-                    rates.AddRange(_providersCombinedExchange.GetWeeklyFxRates(provider).ToList());
+                    rates.AddRange(AsyncUtil.Get_Enumerable_From_IEnumerable(_providersCombinedExchange.GetWeeklyFxRates(provider)).Result);
 
                 if (provider.updatesBiWeekly)
-                    rates.AddRange(_providersCombinedExchange.GetBiWeeklyFxRates(provider).ToList());
+                    rates.AddRange(AsyncUtil.Get_Enumerable_From_IEnumerable(_providersCombinedExchange.GetBiWeeklyFxRates(provider)).Result);
 
                 if (rates.Any())
                 {
@@ -272,22 +272,22 @@ namespace ExchangeRate.Core
                 case ExchangeRateFrequencies.Daily:
                     if (!provider.updatesDaily)
                         throw new ExchangeRateException($"Provider {provider} does not support frequency {frequency}");
-                    itemsToSave.AddRange(_providersCombinedExchange.GetHistoricalDailyFxRates(from, to, provider).ToList());
+                    itemsToSave.AddRange(AsyncUtil.Get_Enumerable_From_IEnumerable(_providersCombinedExchange.GetHistoricalDailyFxRates(from, to, provider)).Result);
                     break;
                 case ExchangeRateFrequencies.Monthly:
                     if (!provider.updatesMonthly)
                         throw new ExchangeRateException($"Provider {provider} does not support frequency {frequency}");
-                    itemsToSave.AddRange(_providersCombinedExchange.GetHistoricalMonthlyFxRates(from, to, provider).ToList());
+                    itemsToSave.AddRange(AsyncUtil.Get_Enumerable_From_IEnumerable(_providersCombinedExchange.GetHistoricalMonthlyFxRates(from, to, provider)).Result);
                     break;
                 case ExchangeRateFrequencies.Weekly:
                     if (!provider.updatesWeekly)
                         throw new ExchangeRateException($"Provider {provider} does not support frequency {frequency}");
-                    itemsToSave.AddRange(_providersCombinedExchange.GetHistoricalWeeklyFxRates(from, to, provider).ToList());
+                    itemsToSave.AddRange(AsyncUtil.Get_Enumerable_From_IEnumerable(_providersCombinedExchange.GetHistoricalWeeklyFxRates(from, to, provider)).Result);
                     break;
                 case ExchangeRateFrequencies.BiWeekly:
                     if (!provider.updatesBiWeekly)
                         throw new ExchangeRateException($"Provider {provider} does not support frequency {frequency}");
-                    itemsToSave.AddRange(_providersCombinedExchange.GetHistoricalBiWeeklyFxRates(from, to, provider).ToList());
+                    itemsToSave.AddRange(AsyncUtil.Get_Enumerable_From_IEnumerable(_providersCombinedExchange.GetHistoricalBiWeeklyFxRates(from, to, provider)).Result);
                     break;
                 default:
                     throw new ExchangeRateException($"Unsupported frequency: {frequency}");
@@ -423,6 +423,9 @@ namespace ExchangeRate.Core
             CurrencyTypes toCurrency,
             out CurrencyTypes lookupCurrency)
         {
+            //This is the how far back in days that an exchange rate can be gotten
+            int Exchange_Rate_Leeway = 30;
+            
             // Handle same-currency conversion (can happen in recursive pegged currency lookups)
             if (fromCurrency == toCurrency)
             {
@@ -465,9 +468,12 @@ namespace ExchangeRate.Core
             }
             // start looking for the date, and decreasing the date if no match found (but only until the minFxDate)
 
-            for (var d = date; d >= minFxDate; d = d.AddDays(-1d))
+            //This section of the code ensures that in the event where minFxDate is less than 7 days ago then no exchange rate is returned because it is too outdated.
+            var date_to_use = minFxDate < date.AddDays(-Exchange_Rate_Leeway) ? date.AddDays(-Exchange_Rate_Leeway) : minFxDate; 
+
+            for (var d = date; d >= date_to_use; d = d.AddDays(-1d))
             {
-                var new_forex_object_to_check = ratesByCurrencyAndDate.FirstOrDefault(s => s.currencyType == internal_lookupCurrency);
+                var new_forex_object_to_check = ratesByCurrencyAndDate.OrderByDescending(s => s.transactionDate).FirstOrDefault(s => s.currencyType == internal_lookupCurrency && s.transactionDate <= date);
 
                 if (new_forex_object_to_check?.transactionDate == d)
                 {

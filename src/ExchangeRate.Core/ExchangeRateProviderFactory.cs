@@ -22,7 +22,7 @@ namespace ExchangeRate.Core
         //This is my new addition as a way to handle adding and removing sources on the fly that will not impact the code much and in theory can be handled completely through a database
         public ForexProviders get_Supported_Forex_Providers_From_Enumerable (ExchangeRateSources source)
         {
-            var provider = _Providers.getList().FirstOrDefault(x => x.Source == source);
+            var provider = _Providers.providers.FirstOrDefault(x => x.Source == source);
 
             if (provider is null)
             {

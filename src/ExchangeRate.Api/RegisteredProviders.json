@@ -1,0 +1,72 @@
+{
+  "registeredProviders": {
+    "providers": [
+    {
+      "BankId": "EUECB",
+      "Currency": 1,
+      "QuoteType": 2,
+      "Source": 1,
+      "updatesDaily": true,
+      "updatesWeekly": false,
+      "updatesBiWeekly": false,
+      "updatesMonthly": true,
+      "ConvertToDailyRate": false
+    },
+    {
+      "BankId": "GBHMRC",
+      "Currency": 2,
+      "QuoteType": 2,
+      "Source": 3,
+      "updatesDaily": false,
+      "updatesWeekly": false,
+      "updatesBiWeekly": false,
+      "updatesMonthly": true,
+      "ConvertToDailyRate": false
+    },
+    {
+      "BankId": "HUCB",
+      "Currency": 8,
+      "QuoteType": 1,
+      "Source": 2,
+      "updatesDaily": true,
+      "updatesWeekly": false,
+      "updatesBiWeekly": false,
+      "updatesMonthly": false,
+      "ConvertToDailyRate": false
+    },
+    {
+      "BankId": "MXCB",
+      "Currency": 25,
+      "QuoteType": 1,
+      "Source": 21,
+      "updatesDaily": false,
+      "updatesWeekly": false,
+      "updatesBiWeekly": false,
+      "updatesMonthly": true,
+      "ConvertToDailyRate": true
+    },
+    {
+      "BankId": "PLCB",
+      "Currency": 9,
+      "QuoteType": 1,
+      "Source": 15,
+      "updatesDaily": true,
+      "updatesWeekly": false,
+      "updatesBiWeekly": false,
+      "updatesMonthly": false,
+      "ConvertToDailyRate": false
+    },
+    {
+      "BankId": "SECB",
+      "Currency": 11,
+      "QuoteType": 1,
+      "Source": 17,
+      "updatesDaily": true,
+      "updatesWeekly": false,
+      "updatesBiWeekly": false,
+      "updatesMonthly": false,
+      "ConvertToDailyRate": false
+    }
+  ]
+}
+}
