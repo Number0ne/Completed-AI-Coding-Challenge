@@ -107,15 +107,19 @@ namespace ExchangeRate.Api.Infrastructure
         {
             foreach (var rate in rates)
             {
-                var existingRate = _exchangeRates.FirstOrDefault(r =>
+                var existingRate = _exchangeRates.FindIndex(r =>
                     r.Date == rate.Date &&
                     r.CurrencyId == rate.CurrencyId &&
                     r.Source == rate.Source &&
                     r.Frequency == rate.Frequency);
 
-                if (existingRate == null)
+                //This section has been modified so if an existing rate is found then it updates the value of the existing rate
+                if (existingRate < 0)
                 {
                     _exchangeRates.Add(rate);
+                }
+                else {
+                    _exchangeRates[existingRate].Rate = rate.Rate;
                 }
             }
 

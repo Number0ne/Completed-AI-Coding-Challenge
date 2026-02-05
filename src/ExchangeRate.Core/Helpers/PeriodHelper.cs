@@ -17,6 +17,14 @@ public static class PeriodHelper
         return new DateTime(date.Year, date.Month, 1);
     }
 
+    //This is to get the last day in the month to be used to fetch from the external API
+    public static DateTime GetEndOfMonth(DateTime date)
+    {
+        int last_day_in_month = DateTime.DaysInMonth(date.Year, date.Month);
+        
+        return new DateTime(date.Year, date.Month, last_day_in_month);
+    }
+
     /// <summary>
     /// Checks whether the given date is valid within the specified validity interval.
     /// Used to validate VAT number validity for exchange rate selection.
