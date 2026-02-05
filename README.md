@@ -41,7 +41,10 @@ If a different rate has been returned for a specific time then instead of throwi
 Updated the codebase to include the additional files
 
 Added a new file called ForexModels and this holds the model to be used instead of the nested dictionary "Dictionary<(ExchangeRateSources, ExchangeRateFrequencies), Dictionary<CurrencyTypes, Dictionary<DateTime, decimal>>> _fxRatesBySourceFrequencyAndCurrency;
-        private Dictionary<(ExchangeRateSources, ExchangeRateFrequencies), DateTime> _minFxDateBySourceAndFrequency;" 
+
+and
+
+Dictionary<(ExchangeRateSources, ExchangeRateFrequencies), DateTime> _minFxDateBySourceAndFrequency;" 
 
 This makes the code vastly more readable as objects are easy to follow. Debugging is easy as you can look at the parameters of the object and print it as a json easily and more importantly it can be passed around to different classes in different files
 
