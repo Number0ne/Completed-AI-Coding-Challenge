@@ -17,6 +17,7 @@ using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
 using Xunit;
+using static ExchangeRate.Api.Infrastructure.MemoryDataStore;
 
 namespace ExchangeRate.Tests;
 

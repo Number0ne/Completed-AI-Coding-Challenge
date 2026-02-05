@@ -6,6 +6,7 @@ using ExchangeRate.Core.Infrastructure;
 using ExchangeRate.Core.Interfaces;
 using ExchangeRate.Core.Models;
 using ExchangeRate.Core.Providers;
+using static ExchangeRate.Api.Infrastructure.MemoryDataStore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,60 +81,3 @@ public record ExchangeRateResponse(
 
 // Make Program accessible to test project
 public partial class Program { }
-
-namespace ExchangeRate.Api.Infrastructure
-{
-    /// <summary>
-    /// In-memory implementation of IExchangeRateDataStore.
-    /// Candidates can replace this with a real database implementation (e.g., EF Core).
-    /// </summary>
-    public class InMemoryExchangeRateDataStore : IExchangeRateDataStore
-    {
-        private readonly List<ExchangeRate.Core.Entities.ExchangeRate> _exchangeRates = new();
-        private readonly List<ExchangeRate.Core.Entities.PeggedCurrency> _peggedCurrencies = new();
-
-        public IQueryable<ExchangeRate.Core.Entities.ExchangeRate> ExchangeRates => _exchangeRates.AsQueryable();
-
-        public Task<List<ExchangeRate.Core.Entities.ExchangeRate>> GetExchangeRatesAsync(DateTime minDate, DateTime maxDate)
-        {
-            var rates = _exchangeRates
-                .Where(r => r.Date.HasValue && r.Date.Value >= minDate && r.Date.Value < maxDate)
-                .ToList();
-
-            return Task.FromResult(rates);
-        }
-
-        public Task SaveExchangeRatesAsync(IEnumerable<ExchangeRate.Core.Entities.ExchangeRate> rates)
-        {
-            foreach (var rate in rates)
-            {
-                var existingRate = _exchangeRates.FindIndex(r =>
-                    r.Date == rate.Date &&
-                    r.CurrencyId == rate.CurrencyId &&
-                    r.Source == rate.Source &&
-                    r.Frequency == rate.Frequency);
-
-                //This section has been modified so if an existing rate is found then it updates the value of the existing rate
-                if (existingRate < 0)
-                {
-                    _exchangeRates.Add(rate);
-                }
-                else {
-                    _exchangeRates[existingRate].Rate = rate.Rate;
-                }
-            }
-
-            return Task.CompletedTask;
-        }
-
-        public List<ExchangeRate.Core.Entities.PeggedCurrency> GetPeggedCurrencies()
-        {
-            return _peggedCurrencies.ToList();
-        }
-
-        public void AddPeggedCurrency(ExchangeRate.Core.Entities.PeggedCurrency peggedCurrency)
-        {
-            _peggedCurrencies.Add(peggedCurrency);
-        }
-    }
-}
