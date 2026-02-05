@@ -6,7 +6,6 @@ using ExchangeRate.Core.Infrastructure;
 using ExchangeRate.Core.Interfaces;
 using ExchangeRate.Core.Models;
 using ExchangeRate.Core.Providers;
-using static ExchangeRate.Api.Infrastructure.MemoryDataStore;
 
 var builder = WebApplication.CreateBuilder(args);
 
