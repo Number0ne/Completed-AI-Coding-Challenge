@@ -4,6 +4,10 @@
 
 https://github.com/Taxually-Engineering/ai-assisted-coding-challenge
 
+## Link to my solution
+
+https://github.com/Number0ne/Completed-AI-Coding-Challenge
+
 ## ---- ##
 Firstly most of the code was written by me. Claude Code was a great help with understanding some parts of the code and the logic of how the forex works. It also gave me a comprehensive guide on how to refactor code which I used as a guideline to how I approached this exercise
 
