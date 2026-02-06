@@ -68,13 +68,17 @@ To aid with this I created a mini helper class, Get_Enumerable_From_IEnumerable 
 
 ## -- NEW ADDITION -- ##
 
-To handle the case where an exchange rate is too old I put a check where if the minFxDate is less than 7 days ago then it isn't used for the forex calculation. This is a good balance of failure proofing and also some leeway for the clients using the system. The variable is Exchange_Rate_Leeway
+To handle the case where an exchange rate is too old I put a check where if the minFxDate is older than 30 days from the date requested then it isn't used for the forex calculation. This is a good balance of failure proofing and also some leeway for the clients using the system. The variable is Exchange_Rate_Leeway
 
 ## -- NEW ADDITION -- ##
 
-I removed the registered providers and added them into a specific json file. this file can be edited at any time and added to the directory of the program. I also registered the service with dependency injection to make it accessible to any class that needs it. This way the program is more modular than ever.
+I removed the registered providers and added them into a specific json file RegisteredProviders.json. this file can be edited at any time and added to the directory of the program. I also registered the service with dependency injection to make it accessible to any class that needs it. This way the program is more modular than ever.
 
-# Database
+## -- NEW ADDITION -- ##
+
+I moved the calculation out from GetFxRate into a Calculate_FX_Rates, this returns a decimal and this means we can now test different rates with different quote types to get the rates. (More work is needed to remove the cross rates calculation into this function or class)
+
+# Database (No Longer Needed)
 
 I plan on adding a database to this application using EF but let me hand in my application first so at least I get the process kick started while I work on this. Overall it has been great working on this and a little jolt my brain needed.
 
