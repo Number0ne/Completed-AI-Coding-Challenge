@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Moq;
 using Newtonsoft.Json;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
@@ -35,11 +36,14 @@ public class ExchangeRateIntegrationTests : IDisposable
 {
     private readonly ExchangeRateApiFactory _factory;
     private HttpClient? _client;
+    private readonly ILogger<ExchangeRateIntegrationTests> _logger;
 
     public ExchangeRateIntegrationTests()
     {
+        var mocklogger = new Mock<ILogger<ExchangeRateIntegrationTests>>();
         // Create a fresh factory for each test to ensure isolation
         // Note: Client is created lazily via GetClient() to allow test setup before service construction
+        _logger = mocklogger.Object;
         _factory = new ExchangeRateApiFactory();
     }
 
@@ -174,7 +178,7 @@ public class ExchangeRateIntegrationTests : IDisposable
         var response = await GetClient().GetAsync(
             $"/api/rates?from=EUR&to=USD&date={requestedDate:yyyy-MM-dd}&source={ExchangeRateSources.ECB}&frequency={ExchangeRateFrequencies.Daily}");
 
-        File.AppendAllText(@"/home/debian/Documents/Personal Projects/TestLogs.txt", JsonConvert.SerializeObject(response));
+         _logger.LogError(JsonConvert.SerializeObject(response));
 
         // Assert - Should fall back to Friday's rate
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -775,7 +779,7 @@ public class ExchangeRateIntegrationTests : IDisposable
         var response = await GetClient().GetAsync(
             $"/api/rates?from=EUR&to=MXN&date={date:yyyy-MM-dd}&source={ExchangeRateSources.MXCB}&frequency={ExchangeRateFrequencies.Monthly}");
 
-        File.AppendAllText(@"/home/debian/Documents/Personal Projects/TestLogs.txt", JsonConvert.SerializeObject(response));
+         _logger.LogError(JsonConvert.SerializeObject(response));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -1010,7 +1014,7 @@ public class ExchangeRateIntegrationTests : IDisposable
         var response = await GetClient().GetAsync(
             $"/api/rates?from=EUR&to=USD&date={veryOldDate:yyyy-MM-dd}&source={ExchangeRateSources.ECB}&frequency={ExchangeRateFrequencies.Daily}");
 
-        File.AppendAllText(@"/home/debian/Documents/Personal Projects/TestLogs.txt", JsonConvert.SerializeObject(response));
+         _logger.LogError(JsonConvert.SerializeObject(response));
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -1034,7 +1038,7 @@ public class ExchangeRateIntegrationTests : IDisposable
         var response = await GetClient().GetAsync(
             $"/api/rates?from=INVALID&to=USD&date={date:yyyy-MM-dd}&source={ExchangeRateSources.ECB}&frequency={ExchangeRateFrequencies.Daily}");
 
-        File.AppendAllText(@"/home/debian/Documents/Personal Projects/TestLogs.txt", JsonConvert.SerializeObject(response));
+         _logger.LogError(JsonConvert.SerializeObject(response));
 
         // Assert - Invalid currency code throws exception
         response.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.NotFound);
@@ -1072,7 +1076,7 @@ public class ExchangeRateIntegrationTests : IDisposable
         var response = await GetClient().GetAsync(
             $"/api/rates?from=&to=USD&date={date:yyyy-MM-dd}&source={ExchangeRateSources.ECB}&frequency={ExchangeRateFrequencies.Daily}");
 
-        File.AppendAllText(@"/home/debian/Documents/Personal Projects/TestLogs.txt", JsonConvert.SerializeObject(response));
+         _logger.LogError(JsonConvert.SerializeObject(response));
 
         // Assert - Empty string is invalid and handled by ASP.NET
         response.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.NotFound);
@@ -1208,9 +1212,12 @@ public class ExchangeRateApiFactory : WebApplicationFactory<Program>
 {
     private readonly WireMockServer _wireMockServer;
     private readonly InMemoryExchangeRateDataStore _dataStore;
+    private readonly ILogger<ExchangeRateApiFactory> _logger;
 
     public ExchangeRateApiFactory()
     {
+        var mocklogger = new Mock<ILogger<ExchangeRateApiFactory>>();
+        _logger = mocklogger.Object;
         _wireMockServer = WireMockServer.Start();
         _dataStore = new InMemoryExchangeRateDataStore();
     }
@@ -1400,14 +1407,14 @@ public class ExchangeRateApiFactory : WebApplicationFactory<Program>
         _wireMockServer.Reset();
     }
 
-    private static string BuildRatesJson(string bankId, string baseCurrency, string quoteType, DateTime date, Dictionary<string, decimal> rates)
+    private string BuildRatesJson(string bankId, string baseCurrency, string quoteType, DateTime date, Dictionary<string, decimal> rates)
     {
         Console.WriteLine(BuildRatesJson(bankId, baseCurrency, quoteType, new Dictionary<DateTime, Dictionary<string, decimal>> { { date, rates } }));
 
         return BuildRatesJson(bankId, baseCurrency, quoteType, new Dictionary<DateTime, Dictionary<string, decimal>> { { date, rates } });
     }
 
-    private static string BuildRatesJson(string bankId, string baseCurrency, string quoteType, Dictionary<DateTime, Dictionary<string, decimal>> ratesByDate)
+    private string BuildRatesJson(string bankId, string baseCurrency, string quoteType, Dictionary<DateTime, Dictionary<string, decimal>> ratesByDate)
     {
         var ratesEntries = new List<string>();
 
@@ -1418,7 +1425,7 @@ public class ExchangeRateApiFactory : WebApplicationFactory<Program>
             ratesEntries.Add($"\"{date:yyyy-MM-dd}T00:00:00\": {{{string.Join(", ", currencyEntries)}}}");
         }
 
-        File.AppendAllText(@"/home/debian/Documents/Personal Projects/TestLogs.txt", $@"{{
+        _logger.LogError(@"/home/debian/Documents/Personal Projects/TestLogs.txt", $@"{{
             ""bankId"": ""{bankId}"",
             ""baseCurrency"": ""{baseCurrency}"",
             ""quoteType"": ""{quoteType}"",

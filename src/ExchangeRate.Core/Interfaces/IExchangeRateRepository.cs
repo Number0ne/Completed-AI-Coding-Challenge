@@ -13,15 +13,5 @@ namespace ExchangeRate.Core.Interfaces
         /// It will return NULL if there is no rate at all for the <paramref name="fromCurrencyCode"/> - <paramref name="toCurrencyCode"/> pair.
         /// </summary>
         decimal? GetRate(string fromCurrencyCode, string toCurrencyCode, DateTime date, ExchangeRateSources source, ExchangeRateFrequencies frequency);
-
-        /// <summary>
-        /// Updates the exhange rates for the last available day.
-        /// </summary>
-        void UpdateRates(ForexProviders provider);
-
-        /// <summary>
-        /// Ensures that the database contains all exchange rates after <paramref name="minDate"/>.
-        /// </summary>
-        bool EnsureMinimumDateRange(ForexProviders provider, DateTime minDate, ExchangeRateFrequencies frequency);
     }
 }

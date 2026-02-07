@@ -53,6 +53,11 @@ builder.Services.AddSingleton<IExchangeRateDataStore, InMemoryExchangeRateDataSt
 // Register the repository
 builder.Services.AddSingleton<IExchangeRateRepository, ExchangeRateRepository>();
 
+//This is to handle the logging to the console so we can monitor the app
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
 var app = builder.Build();
 
 // TEST: Try to resolve the service manually

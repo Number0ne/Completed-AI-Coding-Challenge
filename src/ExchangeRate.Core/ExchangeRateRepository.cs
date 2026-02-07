@@ -139,7 +139,7 @@ namespace ExchangeRate.Core
         /// <summary>
         /// Updates the exchange rates for the last available day/month.
         /// </summary>
-        public void UpdateRates(ForexProviders provider)
+        private void UpdateRates(ForexProviders provider)
         {
             try
             {
@@ -149,13 +149,13 @@ namespace ExchangeRate.Core
                     rates.AddRange(_providersCombinedExchange.GetDailyFxRates(provider));
 
                 if (provider.updatesMonthly)
-                    rates.AddRange(AsyncUtil.Get_Enumerable_From_IEnumerable(_providersCombinedExchange.GetMonthlyFxRates(provider)).Result);
+                    rates.AddRange(_providersCombinedExchange.GetMonthlyFxRates(provider));
 
                 if (provider.updatesWeekly)
-                    rates.AddRange(AsyncUtil.Get_Enumerable_From_IEnumerable(_providersCombinedExchange.GetWeeklyFxRates(provider)).Result);
+                    rates.AddRange(_providersCombinedExchange.GetWeeklyFxRates(provider));
 
                 if (provider.updatesBiWeekly)
-                    rates.AddRange(AsyncUtil.Get_Enumerable_From_IEnumerable(_providersCombinedExchange.GetBiWeeklyFxRates(provider)).Result);
+                    rates.AddRange(_providersCombinedExchange.GetBiWeeklyFxRates(provider));
 
                 if (rates.Any())
                 {
@@ -169,7 +169,7 @@ namespace ExchangeRate.Core
                     }
 
                     if (itemsToSave.Any())
-                        _dataStore.SaveExchangeRatesAsync(itemsToSave).GetAwaiter().GetResult();
+                        _dataStore.SaveExchangeRates(itemsToSave);
                 }
             }
             catch (Exception ex)
@@ -213,7 +213,7 @@ namespace ExchangeRate.Core
         /// <summary>
         /// Ensures that the database contains all exchange rates after <paramref name="minDate"/>.
         /// </summary>
-        public bool EnsureMinimumDateRange(ForexProviders provider, DateTime minDate, ExchangeRateFrequencies frequency)
+        private bool EnsureMinimumDateRange(ForexProviders provider, DateTime minDate, ExchangeRateFrequencies frequency)
         {
 
             //First we check if the source is available with the required update frequency. By default it should be but this is an exception handler
@@ -273,22 +273,22 @@ namespace ExchangeRate.Core
                 case ExchangeRateFrequencies.Daily:
                     if (!provider.updatesDaily)
                         throw new ExchangeRateException($"Provider {provider} does not support frequency {frequency}");
-                    itemsToSave.AddRange(AsyncUtil.Get_Enumerable_From_IEnumerable(_providersCombinedExchange.GetHistoricalDailyFxRates(from, to, provider)).Result);
+                    itemsToSave.AddRange(_providersCombinedExchange.GetHistoricalDailyFxRates(from, to, provider));
                     break;
                 case ExchangeRateFrequencies.Monthly:
                     if (!provider.updatesMonthly)
                         throw new ExchangeRateException($"Provider {provider} does not support frequency {frequency}");
-                    itemsToSave.AddRange(AsyncUtil.Get_Enumerable_From_IEnumerable(_providersCombinedExchange.GetHistoricalMonthlyFxRates(from, to, provider)).Result);
+                    itemsToSave.AddRange(_providersCombinedExchange.GetHistoricalMonthlyFxRates(from, to, provider));
                     break;
                 case ExchangeRateFrequencies.Weekly:
                     if (!provider.updatesWeekly)
                         throw new ExchangeRateException($"Provider {provider} does not support frequency {frequency}");
-                    itemsToSave.AddRange(AsyncUtil.Get_Enumerable_From_IEnumerable(_providersCombinedExchange.GetHistoricalWeeklyFxRates(from, to, provider)).Result);
+                    itemsToSave.AddRange(_providersCombinedExchange.GetHistoricalWeeklyFxRates(from, to, provider));
                     break;
                 case ExchangeRateFrequencies.BiWeekly:
                     if (!provider.updatesBiWeekly)
                         throw new ExchangeRateException($"Provider {provider} does not support frequency {frequency}");
-                    itemsToSave.AddRange(AsyncUtil.Get_Enumerable_From_IEnumerable(_providersCombinedExchange.GetHistoricalBiWeeklyFxRates(from, to, provider)).Result);
+                    itemsToSave.AddRange(_providersCombinedExchange.GetHistoricalBiWeeklyFxRates(from, to, provider));
                     break;
                 default:
                     throw new ExchangeRateException($"Unsupported frequency: {frequency}");
@@ -321,8 +321,7 @@ namespace ExchangeRate.Core
 
             // if storing in memory was successful, we can save it to the database
             if (itemsToSave.Any())
-                _dataStore.SaveExchangeRatesAsync(itemsToSave).GetAwaiter().GetResult();
-
+                _dataStore.SaveExchangeRates(itemsToSave);
             return true;
         }
 
@@ -335,7 +334,7 @@ namespace ExchangeRate.Core
             var minFxDate = _minFxDateBySourceAndFrequency.OrderByDescending(s => s.transactionDate).First().transactionDate;
 
             //Retrieves the relevant exchange rates
-            var fxRatesInDb = _dataStore.GetExchangeRatesAsync(minDate, minFxDate).GetAwaiter().GetResult();
+            var fxRatesInDb = _dataStore.GetExchangeRates(minDate, minFxDate);
 
             LoadRates(fxRatesInDb);
         }

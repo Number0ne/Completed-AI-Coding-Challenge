@@ -18,16 +18,16 @@ namespace ExchangeRate.Api.Infrastructure
 
         public IQueryable<ExchangeRate.Core.Entities.ExchangeRate> ExchangeRates => _exchangeRates.AsQueryable();
 
-        public Task<List<ExchangeRate.Core.Entities.ExchangeRate>> GetExchangeRatesAsync(DateTime minDate, DateTime maxDate)
+        public List<ExchangeRate.Core.Entities.ExchangeRate> GetExchangeRates(DateTime minDate, DateTime maxDate)
         {
             var rates = _exchangeRates
                 .Where(r => r.Date.HasValue && r.Date.Value >= minDate && r.Date.Value < maxDate)
                 .ToList();
 
-            return Task.FromResult(rates);
+            return rates;
         }
 
-        public Task SaveExchangeRatesAsync(IEnumerable<ExchangeRate.Core.Entities.ExchangeRate> rates)
+        public void SaveExchangeRates(IEnumerable<ExchangeRate.Core.Entities.ExchangeRate> rates)
         {
             foreach (var rate in rates)
             {
@@ -47,8 +47,6 @@ namespace ExchangeRate.Api.Infrastructure
                     _exchangeRates[existingRate].Rate = rate.Rate;
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         public List<ExchangeRate.Core.Entities.PeggedCurrency> GetPeggedCurrencies()

@@ -23,26 +23,26 @@ namespace ExchangeRate.Core.Providers
         }
 
 
-        public virtual async IAsyncEnumerable<ExchangeRateEntity> GetHistoricalDailyFxRates(DateTime from, DateTime to, ForexProviders providers)
+        public virtual IEnumerable<ExchangeRateEntity> GetHistoricalDailyFxRates(DateTime from, DateTime to, ForexProviders providers)
         {
             if (to < from)
                 throw new ArgumentException("to must be later than or equal to from");
 
             foreach (var period in GetDateRange(from, to, MaxQueryIntervalInDays))
             {
-                var rates = await GetDailyRatesAsync(providers, (period.StartDate, period.EndDate));
-                foreach (var rate in rates)
-                {
-                    yield return rate;
-                }
+                var rates = GetDailyRatesAsync(providers, (period.StartDate, period.EndDate)).GetAwaiter().GetResult();
+
+                return rates;
             }
+
+            return new List<ExchangeRateEntity>();
         }
 
         public virtual IEnumerable<ExchangeRateEntity> GetDailyFxRates(ForexProviders providers)
         {
             // return await GetDailyRatesAsync(providers.BankId));
             // get a longer interval in case some of the previous rates were missed
-            return (IEnumerable<ExchangeRateEntity>)GetHistoricalDailyFxRates(DateTime.UtcNow.Date.AddDays(-4), DateTime.UtcNow.Date, providers);
+            return GetHistoricalDailyFxRates(DateTime.UtcNow.Date.AddDays(-4), DateTime.UtcNow.Date, providers);
         }
 
         public static IEnumerable<(DateTime StartDate, DateTime EndDate)> GetDateRange(DateTime startDate, DateTime endDate, int daysChunkSize)
@@ -58,14 +58,12 @@ namespace ExchangeRate.Core.Providers
             yield return (StartDate: startDate, EndDate: endDate);
         }
 
-        public async Task<IEnumerable<ExchangeRateEntity>> GetLatestFxRateAsync(ForexProviders providers)
+        public IEnumerable<ExchangeRateEntity> GetLatestFxRateAsync(ForexProviders providers)
         {
-
-
-            return await GetDailyRatesAsync(providers);
+            return GetDailyRatesAsync(providers).GetAwaiter().GetResult();
         }
 
-        public async IAsyncEnumerable<ExchangeRateEntity> GetHistoricalMonthlyFxRates(DateTime from, DateTime to, ForexProviders providers)
+        public IEnumerable<ExchangeRateEntity> GetHistoricalMonthlyFxRates(DateTime from, DateTime to, ForexProviders providers)
         {
             if (to < from)
                 throw new ArgumentException("to must be later than or equal to from");
@@ -76,7 +74,7 @@ namespace ExchangeRate.Core.Providers
             var date = start;
             while (date <= end)
             {
-                var rates = await GetMonthlyRatesAsync(providers, (date.Year, date.Month));
+                var rates = GetMonthlyRatesAsync(providers, (date.Year, date.Month)).GetAwaiter().GetResult();
                 foreach (var rate in rates)
                 {
                     yield return rate;
@@ -86,11 +84,11 @@ namespace ExchangeRate.Core.Providers
             }
         }
 
-        public async IAsyncEnumerable<ExchangeRateEntity> GetMonthlyFxRates(ForexProviders providers)
+        public IEnumerable<ExchangeRateEntity> GetMonthlyFxRates(ForexProviders providers)
         {
 
             //This gets the list from the External API
-            var result_list = await GetMonthlyRatesAsync(providers);
+            var result_list = GetMonthlyRatesAsync(providers).GetAwaiter().GetResult();
             foreach (var result in result_list)
             {
                 //This returns the list that is returned
@@ -98,10 +96,10 @@ namespace ExchangeRate.Core.Providers
             }
         }
 
-        public async IAsyncEnumerable<ExchangeRateEntity> GetWeeklyFxRates(ForexProviders providers)
+        public IEnumerable<ExchangeRateEntity> GetWeeklyFxRates(ForexProviders providers)
         {
             //This gets the list from the External API
-            var result_list = await GetWeeklyRatesAsync(providers);
+            var result_list = GetWeeklyRatesAsync(providers).GetAwaiter().GetResult();
             foreach (var result in result_list)
             {
                 //This returns the list that is returned
@@ -109,7 +107,7 @@ namespace ExchangeRate.Core.Providers
             }
         }
 
-        public async IAsyncEnumerable<ExchangeRateEntity> GetHistoricalWeeklyFxRates(DateTime from, DateTime to, ForexProviders providers)
+        public IEnumerable<ExchangeRateEntity> GetHistoricalWeeklyFxRates(DateTime from, DateTime to, ForexProviders providers)
         {
 
 
@@ -122,7 +120,7 @@ namespace ExchangeRate.Core.Providers
             var date = start;
             while (date <= end)
             {
-                var rates = await GetWeeklyRatesAsync(providers, (date.Year, date.Month));
+                var rates = GetWeeklyRatesAsync(providers, (date.Year, date.Month)).GetAwaiter().GetResult();
                 foreach (var rate in rates)
                 {
                     yield return rate;
@@ -132,10 +130,10 @@ namespace ExchangeRate.Core.Providers
             }
         }
 
-        public async IAsyncEnumerable<ExchangeRateEntity> GetBiWeeklyFxRates(ForexProviders providers)
+        public IEnumerable<ExchangeRateEntity> GetBiWeeklyFxRates(ForexProviders providers)
         {
             //This gets the list from the External API
-            var result_list = await GetBiWeeklyRatesAsync(providers);
+            var result_list = GetBiWeeklyRatesAsync(providers).GetAwaiter().GetResult();
             foreach (var result in result_list)
             {
                 //This returns the list that is returned
@@ -143,7 +141,7 @@ namespace ExchangeRate.Core.Providers
             }
         }
 
-        public async IAsyncEnumerable<ExchangeRateEntity> GetHistoricalBiWeeklyFxRates(DateTime from, DateTime to, ForexProviders providers)
+        public IEnumerable<ExchangeRateEntity> GetHistoricalBiWeeklyFxRates(DateTime from, DateTime to, ForexProviders providers)
         {
             if (to < from)
                 throw new ArgumentException("to must be later than or equal to from");
@@ -154,7 +152,7 @@ namespace ExchangeRate.Core.Providers
             var date = start;
             while (date <= end)
             {
-                var rates = await GetBiWeeklyRatesAsync(providers, (date.Year, date.Month));
+                var rates = GetBiWeeklyRatesAsync(providers, (date.Year, date.Month)).GetAwaiter().GetResult();
                 foreach (var rate in rates)
                 {
                     yield return rate;

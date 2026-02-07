@@ -27,7 +27,7 @@ public interface IExchangeRateDataStore
     /// <param name="minDate">Minimum date (inclusive)</param>
     /// <param name="maxDate">Maximum date (exclusive)</param>
     /// <returns>List of exchange rates within the date range</returns>
-    Task<List<Entities.ExchangeRate>> GetExchangeRatesAsync(DateTime minDate, DateTime maxDate);
+    List<Entities.ExchangeRate> GetExchangeRates(DateTime minDate, DateTime maxDate);
 
     /// <summary>
     /// Saves multiple exchange rates to the data store.
@@ -35,7 +35,7 @@ public interface IExchangeRateDataStore
     /// it should be updated or ignored based on implementation.
     /// </summary>
     /// <param name="rates">Exchange rates to save</param>
-    Task SaveExchangeRatesAsync(IEnumerable<Entities.ExchangeRate> rates);
+    void SaveExchangeRates(IEnumerable<Entities.ExchangeRate> rates);
 
     /// <summary>
     /// Gets all pegged currency configurations.
