@@ -82,6 +82,10 @@ I removed the registered providers and added them into a specific json file Regi
 
 I moved the calculation out from GetFxRate into a Calculate_FX_Rates, this returns a decimal and this means we can now test different rates with different quote types to get the rates. (More work is needed to remove the cross rates calculation into this function or class)
 
+## -- FINAL ADDITION -- ##
+
+Replaced the file writing for logs to ILogger (This was a critical fix), adjusted the code so the main get rate function does not have any async parts and it is all sequential, the CombinedExternalApiExchangeRateProvider class does not return async objects and the save to database and also the get from database functions are now sequential and the interface for the exchange rate repository class has only the required functions i.e only get rate
+
 # Database (No Longer Needed)
 
 I plan on adding a database to this application using EF but let me hand in my application first so at least I get the process kick started while I work on this. Overall it has been great working on this and a little jolt my brain needed.
