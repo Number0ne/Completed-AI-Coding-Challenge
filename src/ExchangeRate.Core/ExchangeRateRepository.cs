@@ -127,11 +127,13 @@ namespace ExchangeRate.Core
                 }
 
                 _logger.LogError("No {source} {frequency} exchange rate found for {lookupCurrency} on {date:yyyy-MM-dd}. Earliest available date: {minFxDate:yyyy-MM-dd}. FromCurrency: {fromCurrency}, ToCurrency: {toCurrency}", source, frequency, lookupCurrency, date, minFxDate, fromCurrency, toCurrency);
+
                 return null;
             }
             catch (Exception ex)
             {
-                File.AppendAllText(@"/home/debian/Documents/Personal Projects/TestLogs.txt", ex.Message + ex.StackTrace);
+                _logger.LogError(ex.Message + ex.StackTrace);
+                
                 return null;
             }
         }
